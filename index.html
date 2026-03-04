@@ -2,10 +2,14 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>Video Saver - Моя коллекция</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Добавляем поддержку touch-событий -->
+    <meta name="theme-color" content="#ff0000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
     <div class="container">
@@ -16,18 +20,28 @@
                 <h1>Video Saver</h1>
             </div>
             <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Поиск видео...">
+                <input type="text" id="searchInput" placeholder="Поиск...">
                 <button id="searchBtn"><i class="fas fa-search"></i></button>
             </div>
-            <button class="add-video-btn" id="addVideoBtn">
-                <i class="fas fa-plus"></i> Добавить видео
+            <button class="add-video-btn" id="addVideoBtn" aria-label="Добавить видео">
+                <i class="fas fa-plus"></i>
+                <span class="btn-text">Добавить</span>
             </button>
         </header>
+
+        <!-- Мобильное меню (бургер) -->
+        <div class="mobile-menu-toggle" id="mobileMenuToggle">
+            <i class="fas fa-bars"></i>
+        </div>
 
         <!-- Основной контент -->
         <div class="main-content">
             <!-- Сайдбар с категориями -->
-            <aside class="sidebar">
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <h2>Категории</h2>
+                    <button class="close-sidebar" id="closeSidebar">&times;</button>
+                </div>
                 <nav>
                     <ul>
                         <li class="active" data-category="all">
@@ -72,9 +86,9 @@
                 <h2>Добавить видео</h2>
                 <form id="videoForm">
                     <div class="form-group">
-                        <label for="videoUrl">Ссылка на видео (из интернета):</label>
+                        <label for="videoUrl">Ссылка на видео:</label>
                         <input type="url" id="videoUrl" placeholder="https://...">
-                        <small style="color: #666; display: block; margin-top: 5px;">Для YouTube, VK, TikTok</small>
+                        <small class="hint">YouTube, VK, TikTok</small>
                     </div>
                     
                     <div class="form-divider">
@@ -82,14 +96,9 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="videoFile">Загрузить видео с компьютера:</label>
-                        <input type="file" id="videoFile" accept="video/*">
-                        <small style="color: #666; display: block; margin-top: 5px;">
-                            ⚡ Видео сохранится в браузере и будет доступно даже после удаления с ПК
-                        </small>
-                        <small style="color: #ff6b6b; display: block; margin-top: 5px;">
-                            📌 Макс. размер: 50 МБ (поддержка MP4, WebM, AVI)
-                        </small>
+                        <label for="videoFile">Загрузить с телефона:</label>
+                        <input type="file" id="videoFile" accept="video/*" capture>
+                        <small class="hint">Макс. 50 МБ. Поддержка MP4, 3GP, MOV</small>
                     </div>
 
                     <div class="form-group">
@@ -110,7 +119,7 @@
                     
                     <div class="form-group">
                         <label for="videoThumbnail">Миниатюра (URL):</label>
-                        <input type="url" id="videoThumbnail" placeholder="https://... (оставьте пустым для авто)">
+                        <input type="url" id="videoThumbnail" placeholder="https://... (необязательно)">
                     </div>
                     
                     <button type="submit" class="submit-btn">Сохранить видео</button>
@@ -128,14 +137,17 @@
                 <div class="video-info">
                     <h3 id="playerVideoTitle"></h3>
                     <div class="video-stats">
-                        <span><i class="fas fa-eye"></i> <span id="viewCount">0</span> просмотров</span>
+                        <span><i class="fas fa-eye"></i> <span id="viewCount">0</span></span>
                         <span><i class="fas fa-calendar"></i> <span id="videoDate"></span></span>
-                        <span id="videoFileInfo" style="display: none;"></span>
+                        <span id="videoFileInfo"></span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Оверлей для мобильного меню -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <script src="script.js"></script>
 </body>

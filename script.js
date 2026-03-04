@@ -23,6 +23,9 @@ class VideoSaver {
             other: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%23666666\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3EVideo%3C/text%3E%3C/svg%3E'
         };
         
+        // Флаг для мобильного меню
+        this.isMobileMenuOpen = false;
+        
         this.init();
     }
     
@@ -40,6 +43,124 @@ class VideoSaver {
         this.bindEvents();
         this.render();
         this.setupCategorySelect();
+        this.setupMobileMenu();
+        this.handleOrientationChange();
+        this.setupPullToRefresh();
+    }
+    
+    setupPullToRefresh() {
+        let touchStartY = 0;
+        const container = document.querySelector('.videos-grid');
+        
+        if (container) {
+            container.addEventListener('touchstart', (e) => {
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+            
+            container.addEventListener('touchend', (e) => {
+                const touchEndY = e.changedTouches[0].clientY;
+                const scrollTop = container.scrollTop;
+                
+                // Pull-to-refresh если вверху страницы
+                if (scrollTop === 0 && touchEndY > touchStartY + 50) {
+                    this.refreshData();
+                }
+            }, { passive: true });
+        }
+    }
+    
+    refreshData() {
+        // Визуальная индикация обновления
+        const grid = document.getElementById('videosGrid');
+        grid.style.opacity = '0.5';
+        grid.style.transition = 'opacity 0.3s';
+        
+        this.loadData();
+        this.render();
+        
+        setTimeout(() => {
+            grid.style.opacity = '1';
+        }, 300);
+    }
+    
+    setupMobileMenu() {
+        const toggleBtn = document.getElementById('mobileMenuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const closeBtn = document.getElementById('closeSidebar');
+        
+        if (toggleBtn && sidebar && overlay) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleMobileMenu();
+            });
+            
+            overlay.addEventListener('click', () => {
+                this.closeMobileMenu();
+            });
+            
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    this.closeMobileMenu();
+                });
+            }
+            
+            // Закрытие свайпом влево
+            let touchStartX = 0;
+            sidebar.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+            }, { passive: true });
+            
+            sidebar.addEventListener('touchend', (e) => {
+                const touchEndX = e.changedTouches[0].clientX;
+                if (touchEndX < touchStartX - 50) {
+                    this.closeMobileMenu();
+                }
+            }, { passive: true });
+        }
+    }
+    
+    toggleMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (window.innerWidth <= 768) {
+            this.isMobileMenuOpen = !this.isMobileMenuOpen;
+            
+            if (this.isMobileMenuOpen) {
+                sidebar.classList.add('active');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            } else {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+    }
+    
+    closeMobileMenu() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (window.innerWidth <= 768) {
+            this.isMobileMenuOpen = false;
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+    
+    handleOrientationChange() {
+        window.addEventListener('resize', () => {
+            // Закрываем мобильное меню при повороте
+            if (window.innerWidth > 768 && this.isMobileMenuOpen) {
+                this.closeMobileMenu();
+            }
+            
+            // Перерисовываем для адаптации сетки
+            this.render();
+        });
     }
     
     initDB() {
@@ -53,7 +174,7 @@ class VideoSaver {
             
             request.onsuccess = (event) => {
                 this.db = event.target.result;
-                console.log('✅ IndexedDB готова к работе');
+                console.log('✅ IndexedDB готова');
                 resolve();
             };
             
@@ -64,7 +185,6 @@ class VideoSaver {
                     const store = db.createObjectStore('videos', { keyPath: 'id' });
                     store.createIndex('filename', 'filename', { unique: false });
                     store.createIndex('date', 'uploaded', { unique: false });
-                    console.log('📁 Создано хранилище для видео');
                 }
             };
         });
@@ -93,7 +213,7 @@ class VideoSaver {
             localStorage.setItem(this.categoriesKey, JSON.stringify(this.customCategories));
         } catch (e) {
             console.error('Ошибка сохранения данных:', e);
-            alert('Не удалось сохранить данные. Возможно, превышен лимит localStorage.');
+            alert('Не удалось сохранить данные. Освободите место в localStorage.');
         }
     }
     
@@ -128,7 +248,12 @@ class VideoSaver {
     
     bindEvents() {
         const addBtn = document.getElementById('addVideoBtn');
-        if (addBtn) addBtn.addEventListener('click', () => this.openModal('videoModal'));
+        if (addBtn) {
+            addBtn.addEventListener('click', () => this.openModal('videoModal'));
+            addBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Предотвращаем двойной срабатывание на мобильных
+            });
+        }
         
         const closeBtn = document.querySelector('.close');
         if (closeBtn) closeBtn.addEventListener('click', () => {
@@ -155,19 +280,27 @@ class VideoSaver {
         }
         
         const searchBtn = document.getElementById('searchBtn');
-        if (searchBtn) searchBtn.addEventListener('click', () => this.searchVideos());
+        if (searchBtn) {
+            searchBtn.addEventListener('click', () => this.searchVideos());
+            searchBtn.addEventListener('touchstart', (e) => e.preventDefault());
+        }
         
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
             searchInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') this.searchVideos();
             });
+            searchInput.addEventListener('search', () => this.searchVideos()); // Для мобильной клавиатуры
         }
         
         document.querySelectorAll('.sidebar nav ul li').forEach(item => {
             item.addEventListener('click', () => {
                 this.setCategory(item.dataset.category);
+                if (window.innerWidth <= 768) {
+                    this.closeMobileMenu();
+                }
             });
+            item.addEventListener('touchstart', (e) => e.preventDefault());
         });
         
         const addCategoryBtn = document.getElementById('addCategoryBtn');
@@ -179,6 +312,12 @@ class VideoSaver {
                 this.pauseVideo();
                 this.resetForm();
             }
+        });
+        
+        // Обработка back button на Android
+        window.addEventListener('popstate', () => {
+            this.closeAllModals();
+            this.closeMobileMenu();
         });
     }
     
@@ -243,7 +382,6 @@ class VideoSaver {
     
     async uploadVideoFile(file, videoData) {
         return new Promise((resolve, reject) => {
-            // Проверка размера (50 МБ максимум)
             if (file.size > 50 * 1024 * 1024) {
                 reject(new Error('Файл слишком большой. Максимальный размер: 50 МБ'));
                 return;
@@ -255,7 +393,6 @@ class VideoSaver {
                 const videoBlob = e.target.result;
                 const videoId = Date.now();
                 
-                // Сохраняем в IndexedDB
                 const transaction = this.db.transaction(['videos'], 'readwrite');
                 const store = transaction.objectStore('videos');
                 
@@ -271,7 +408,6 @@ class VideoSaver {
                 const request = store.add(videoEntry);
                 
                 request.onsuccess = () => {
-                    // Создаем объект видео для основного списка
                     const newVideo = {
                         id: videoId,
                         url: `video_${videoId}`,
@@ -315,7 +451,7 @@ class VideoSaver {
                 if (request.result) {
                     resolve(request.result);
                 } else {
-                    reject('Видео не найдено в хранилище');
+                    reject('Видео не найдено');
                 }
             };
             
@@ -330,13 +466,11 @@ class VideoSaver {
         const categorySelect = document.getElementById('videoCategory');
         const thumbnailInput = document.getElementById('videoThumbnail');
         
-        // Проверяем, что хоть что-то заполнено
         if ((!urlInput || !urlInput.value) && (!fileInput || !fileInput.files.length)) {
             alert('Введите ссылку на видео или выберите файл');
             return;
         }
         
-        // Если выбран файл, загружаем его
         if (fileInput && fileInput.files.length > 0) {
             const file = fileInput.files[0];
             
@@ -350,13 +484,15 @@ class VideoSaver {
                 await this.uploadVideoFile(file, videoData);
                 this.closeModal('videoModal');
                 this.resetForm();
+                
+                // Показываем сообщение об успехе
+                this.showToast('Видео успешно загружено!');
             } catch (error) {
-                alert('Ошибка при загрузке файла: ' + error.message);
+                alert('Ошибка при загрузке: ' + error.message);
             }
             return;
         }
         
-        // Логика для ссылок
         const url = urlInput.value;
         const title = titleInput?.value || 'Без названия';
         const category = categorySelect?.value || 'other';
@@ -382,6 +518,33 @@ class VideoSaver {
         this.render();
         this.closeModal('videoModal');
         this.resetForm();
+        
+        this.showToast('Ссылка сохранена!');
+    }
+    
+    showToast(message) {
+        const toast = document.createElement('div');
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0,0,0,0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            z-index: 2000;
+            animation: fadeInOut 2s ease;
+            pointer-events: none;
+        `;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 2000);
     }
     
     editVideo(videoId) {
@@ -421,7 +584,6 @@ class VideoSaver {
     updateVideo() {
         if (!this.editingVideoId) return;
         
-        const urlInput = document.getElementById('videoUrl');
         const titleInput = document.getElementById('videoTitle');
         const categorySelect = document.getElementById('videoCategory');
         const thumbnailInput = document.getElementById('videoThumbnail');
@@ -440,13 +602,14 @@ class VideoSaver {
         this.render();
         this.closeModal('videoModal');
         this.resetForm();
+        
+        this.showToast('Видео обновлено!');
     }
     
     async deleteVideo(videoId) {
-        if (confirm('Вы уверены, что хотите удалить это видео?')) {
+        if (confirm('Удалить видео?')) {
             const video = this.videos.find(v => v.id === videoId);
             
-            // Если видео локальное, удаляем из IndexedDB
             if (video && video.type === 'local' && this.db) {
                 try {
                     const transaction = this.db.transaction(['videos'], 'readwrite');
@@ -460,6 +623,8 @@ class VideoSaver {
             this.videos = this.videos.filter(v => v.id !== videoId);
             this.saveData();
             this.render();
+            
+            this.showToast('Видео удалено');
         }
     }
     
@@ -483,7 +648,7 @@ class VideoSaver {
     }
     
     addCategory() {
-        const categoryName = prompt('Введите название категории:');
+        const categoryName = prompt('Название категории:');
         if (categoryName && categoryName.trim()) {
             const newCategory = {
                 id: Date.now(),
@@ -493,11 +658,13 @@ class VideoSaver {
             this.saveData();
             this.renderCategories();
             this.setupCategorySelect();
+            
+            this.showToast('Категория создана');
         }
     }
     
     deleteCategory(categoryId) {
-        if (confirm('Удалить категорию? Видео в этой категории будут перемещены в "Все видео"')) {
+        if (confirm('Удалить категорию?')) {
             this.customCategories = this.customCategories.filter(c => c.id !== categoryId);
             
             this.videos.forEach(video => {
@@ -510,6 +677,8 @@ class VideoSaver {
             this.renderCategories();
             this.setupCategorySelect();
             this.render();
+            
+            this.showToast('Категория удалена');
         }
     }
     
@@ -538,6 +707,10 @@ class VideoSaver {
                 video.title && video.title.toLowerCase().includes(query)
             );
             this.render(filtered);
+            
+            if (filtered.length === 0) {
+                this.showToast('Ничего не найдено');
+            }
         } else {
             this.render();
         }
@@ -575,6 +748,8 @@ class VideoSaver {
                 videoElement.autoplay = true;
                 videoElement.style.width = '100%';
                 videoElement.style.maxHeight = '70vh';
+                videoElement.setAttribute('playsinline', ''); // Для iOS
+                videoElement.setAttribute('webkit-playsinline', '');
                 
                 const source = document.createElement('source');
                 source.src = localVideo.data;
@@ -585,23 +760,14 @@ class VideoSaver {
                 
                 playerContainer.appendChild(videoElement);
                 
-                // Добавляем информацию о файле
                 if (videoFileInfo) {
                     videoFileInfo.style.display = 'inline';
-                    videoFileInfo.innerHTML = `
-                        <i class="fas fa-hdd"></i> ${video.filename || 'Локальное видео'} (${video.size || 'неизвестно'})
-                    `;
+                    videoFileInfo.innerHTML = `📁 ${video.filename || 'Локальное видео'} (${video.size || 'неизвестно'})`;
                 }
                 
             } catch (error) {
                 console.error('Ошибка загрузки локального видео:', error);
-                playerContainer.innerHTML = `
-                    <div style="text-align: center; padding: 40px; background: #ff4444; color: white; border-radius: 10px;">
-                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px;"></i>
-                        <p style="font-size: 18px; margin-bottom: 20px;">Ошибка загрузки видео из хранилища</p>
-                        <p style="font-size: 14px; opacity: 0.9;">Видео могло быть повреждено или удалено</p>
-                    </div>
-                `;
+                playerContainer.innerHTML = this.createErrorMessage('Ошибка загрузки видео');
             }
         } else if (video.type === 'youtube') {
             const videoId = this.getYouTubeId(video.url);
@@ -609,53 +775,23 @@ class VideoSaver {
                 const iframe = document.createElement('iframe');
                 iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
                 iframe.width = '100%';
-                iframe.height = '500';
+                iframe.height = window.innerWidth <= 768 ? '250' : '500';
                 iframe.frameBorder = '0';
                 iframe.allow = 'autoplay; encrypted-media; fullscreen';
                 iframe.allowFullscreen = true;
                 playerContainer.appendChild(iframe);
             } else {
-                playerContainer.innerHTML = `
-                    <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #FF0000, #CC0000); border-radius: 10px;">
-                        <i class="fab fa-youtube" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
-                        <p style="color: white; font-size: 18px; margin-bottom: 25px;">Не удалось загрузить видео</p>
-                        <a href="${this.escapeHtml(video.url)}" target="_blank" 
-                           style="display: inline-block; padding: 15px 40px; background: white; color: #FF0000; 
-                                  text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;
-                                  transition: transform 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"
-                           onmouseover="this.style.transform='scale(1.05)'"
-                           onmouseout="this.style.transform='scale(1)'">
-                            <i class="fab fa-youtube"></i> Открыть на YouTube
-                        </a>
-                    </div>
-                `;
+                playerContainer.innerHTML = this.createExternalLink(video, 'YouTube', '#FF0000');
             }
         } else {
-            // Для VK, TikTok и других - показываем красивую кнопку перехода
             const colors = {
-                vk: { bg: 'linear-gradient(135deg, #4A76A8, #2A4F7C)', icon: 'fab fa-vk', text: 'VK' },
-                tiktok: { bg: 'linear-gradient(135deg, #25F4EE, #FE2C55)', icon: 'fab fa-tiktok', text: 'TikTok' },
-                other: { bg: 'linear-gradient(135deg, #666666, #333333)', icon: 'fas fa-external-link-alt', text: 'ссылку' }
+                vk: { bg: 'linear-gradient(135deg, #4A76A8, #2A4F7C)', name: 'VK' },
+                tiktok: { bg: 'linear-gradient(135deg, #25F4EE, #FE2C55)', name: 'TikTok' },
+                other: { bg: 'linear-gradient(135deg, #666666, #333333)', name: 'ссылку' }
             };
             
             const style = colors[video.type] || colors.other;
-            
-            playerContainer.innerHTML = `
-                <div style="text-align: center; padding: 40px; background: ${style.bg}; border-radius: 10px;">
-                    <i class="${style.icon}" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
-                    <p style="color: white; font-size: 18px; margin-bottom: 25px;">
-                        Видео откроется в новой вкладке
-                    </p>
-                    <a href="${this.escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer"
-                       style="display: inline-block; padding: 15px 40px; background: white; 
-                              text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;
-                              transition: transform 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"
-                       onmouseover="this.style.transform='scale(1.05)'"
-                       onmouseout="this.style.transform='scale(1)'">
-                        <i class="${style.icon}"></i> Открыть ${style.text}
-                    </a>
-                </div>
-            `;
+            playerContainer.innerHTML = this.createExternalLink(video, style.name, style.bg);
         }
         
         if (playerTitle) playerTitle.textContent = video.title || 'Без названия';
@@ -663,6 +799,33 @@ class VideoSaver {
         if (videoDate) videoDate.textContent = video.date || new Date().toLocaleDateString('ru-RU');
         
         this.openModal('playerModal');
+    }
+    
+    createErrorMessage(text) {
+        return `
+            <div style="text-align: center; padding: 40px 20px; background: #ff4444; color: white; border-radius: 10px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px;"></i>
+                <p style="font-size: 16px;">${text}</p>
+            </div>
+        `;
+    }
+    
+    createExternalLink(video, platform, bgColor) {
+        return `
+            <div style="text-align: center; padding: 30px 15px; background: ${bgColor}; border-radius: 10px;">
+                <i class="fab fa-${platform.toLowerCase() === 'vk' ? 'vk' : platform.toLowerCase() === 'tiktok' ? 'tiktok' : 'youtube'}" 
+                   style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
+                <p style="color: white; font-size: 18px; margin-bottom: 25px;">
+                    Открыть в ${platform}
+                </p>
+                <a href="${this.escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer"
+                   style="display: inline-block; padding: 15px 30px; background: white; 
+                          text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;
+                          box-shadow: 0 4px 15px rgba(0,0,0,0.2); color: #333;">
+                    <i class="fas fa-external-link-alt"></i> Открыть
+                </a>
+            </div>
+        `;
     }
     
     pauseVideo() {
@@ -674,18 +837,25 @@ class VideoSaver {
     
     openModal(modalId) {
         const modal = document.getElementById(modalId);
-        if (modal) modal.style.display = 'block';
+        if (modal) {
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
     }
     
     closeModal(modalId) {
         const modal = document.getElementById(modalId);
-        if (modal) modal.style.display = 'none';
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
     }
     
     closeAllModals() {
         document.querySelectorAll('.modal').forEach(modal => {
             modal.style.display = 'none';
         });
+        document.body.style.overflow = '';
     }
     
     renderCategories() {
@@ -706,6 +876,9 @@ class VideoSaver {
             div.addEventListener('click', (e) => {
                 if (!e.target.closest('.delete-category')) {
                     this.setCategory(`custom_${category.id}`);
+                    if (window.innerWidth <= 768) {
+                        this.closeMobileMenu();
+                    }
                 }
             });
             container.appendChild(div);
@@ -752,7 +925,7 @@ class VideoSaver {
                         ${video.type === 'vk' ? 'VK' : 
                           video.type === 'youtube' ? 'YT' : 
                           video.type === 'tiktok' ? 'TT' : 
-                          video.type === 'local' ? '💾' : ''}
+                          video.type === 'local' ? '📱' : ''}
                     </div>
                     <div class="video-actions">
                         <button class="edit-video-btn" onclick="event.stopPropagation(); videoSaver.editVideo(${video.id})">
@@ -786,6 +959,17 @@ class VideoSaver {
                     this.playVideo(video);
                 }
             });
+            
+            // Для мобильных добавляем touch-событие
+            card.addEventListener('touchstart', (e) => {
+                if (!e.target.closest('.edit-video-btn') && !e.target.closest('.delete-video-btn')) {
+                    card.style.transform = 'scale(0.98)';
+                }
+            }, { passive: true });
+            
+            card.addEventListener('touchend', (e) => {
+                card.style.transform = '';
+            }, { passive: true });
         });
     }
     

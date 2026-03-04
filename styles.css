@@ -1,110 +1,218 @@
+/* ===== ОБНУЛЕНИЕ И БАЗОВЫЕ СТИЛИ ===== */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent; /* Убираем серый фон при тапе на мобильных */
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     background-color: #f9f9f9;
+    color: #333;
+    line-height: 1.5;
+    overflow-x: hidden;
+    width: 100%;
+    min-height: 100vh;
 }
 
 .container {
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
-/* Шапка */
+/* ===== ШАПКА ===== */
 header {
     background-color: white;
-    padding: 1rem 2rem;
+    padding: clamp(8px, 2vw, 16px) clamp(10px, 3vw, 32px);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     position: sticky;
     top: 0;
     z-index: 100;
+    gap: 8px;
+    flex-wrap: wrap;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background-color: rgba(255,255,255,0.95);
 }
 
 .logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: clamp(5px, 1.5vw, 10px);
 }
 
 .logo i {
-    font-size: 2rem;
+    font-size: clamp(1.5rem, 5vw, 2rem);
     color: #ff0000;
 }
 
 .logo h1 {
-    font-size: 1.5rem;
+    font-size: clamp(1rem, 4vw, 1.5rem);
     color: #333;
+    white-space: nowrap;
 }
 
 .search-bar {
     display: flex;
     align-items: center;
-    flex: 0 1 500px;
+    flex: 1 1 auto;
+    max-width: 500px;
+    min-width: 120px;
 }
 
 .search-bar input {
     width: 100%;
-    padding: 10px;
+    padding: clamp(8px, 2vw, 12px);
     border: 1px solid #ddd;
-    border-radius: 20px 0 0 20px;
-    font-size: 1rem;
+    border-radius: 25px 0 0 25px;
+    font-size: clamp(14px, 4vw, 16px);
     outline: none;
+    background: white;
 }
 
 .search-bar button {
-    padding: 10px 20px;
+    padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 20px);
     background-color: #f8f8f8;
     border: 1px solid #ddd;
     border-left: none;
-    border-radius: 0 20px 20px 0;
+    border-radius: 0 25px 25px 0;
     cursor: pointer;
     transition: background-color 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.search-bar button:hover {
+.search-bar button:hover,
+.search-bar button:active {
     background-color: #e8e8e8;
 }
 
 .add-video-btn {
-    padding: 10px 20px;
+    padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 24px);
     background-color: #ff0000;
     color: white;
     border: none;
-    border-radius: 20px;
+    border-radius: 25px;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: clamp(14px, 4vw, 16px);
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: background-color 0.3s;
+    transition: all 0.3s;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(255,0,0,0.3);
 }
 
-.add-video-btn:hover {
+.add-video-btn:active {
+    transform: scale(0.95);
     background-color: #cc0000;
 }
 
-/* Основной контент */
+.btn-text {
+    display: inline;
+}
+
+@media (max-width: 480px) {
+    .btn-text {
+        display: none;
+    }
+    .add-video-btn {
+        padding: 10px 15px;
+    }
+}
+
+/* ===== МОБИЛЬНОЕ МЕНЮ ===== */
+.mobile-menu-toggle {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background-color: #ff0000;
+    color: white;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 4px 15px rgba(255,0,0,0.4);
+    z-index: 99;
+    cursor: pointer;
+    transition: transform 0.3s, background-color 0.3s;
+    border: none;
+}
+
+.mobile-menu-toggle:active {
+    transform: scale(0.9);
+    background-color: #cc0000;
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 199;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+/* ===== ОСНОВНОЙ КОНТЕНТ ===== */
 .main-content {
     display: flex;
     min-height: calc(100vh - 70px);
+    width: 100%;
 }
 
-/* Сайдбар */
+/* ===== САЙДБАР ===== */
 .sidebar {
-    width: 240px;
+    width: 280px;
     background-color: white;
-    padding: 20px 0;
     border-right: 1px solid #ddd;
     position: sticky;
     top: 70px;
     height: calc(100vh - 70px);
     overflow-y: auto;
+    transition: transform 0.3s ease;
+    z-index: 200;
+    -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+}
+
+.sidebar-header {
+    display: none;
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.close-sidebar {
+    font-size: 28px;
+    cursor: pointer;
+    color: #999;
+    background: none;
+    border: none;
+    padding: 0 10px;
+}
+
+.close-sidebar:active {
+    color: #ff0000;
 }
 
 .sidebar nav ul {
@@ -112,32 +220,35 @@ header {
 }
 
 .sidebar nav ul li {
-    padding: 12px 20px;
+    padding: clamp(12px, 3vw, 15px) clamp(15px, 4vw, 20px);
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: clamp(10px, 2.5vw, 15px);
     cursor: pointer;
     transition: background-color 0.3s;
+    font-size: clamp(14px, 4vw, 16px);
+    border-left: 3px solid transparent;
 }
 
-.sidebar nav ul li:hover {
-    background-color: #f5f5f5;
+.sidebar nav ul li:active {
+    background-color: #f0f0f0;
 }
 
 .sidebar nav ul li.active {
-    background-color: #e8e8e8;
-    font-weight: bold;
-    border-left: 3px solid #ff0000;
+    background-color: #f0f0f0;
+    font-weight: 600;
+    border-left-color: #ff0000;
 }
 
 .categories-section {
-    padding: 20px;
+    padding: clamp(15px, 4vw, 20px);
     border-top: 1px solid #ddd;
 }
 
 .categories-section h3 {
     margin-bottom: 15px;
     color: #555;
+    font-size: clamp(14px, 4vw, 16px);
 }
 
 #customCategories {
@@ -145,85 +256,96 @@ header {
 }
 
 .custom-category {
-    padding: 8px 15px;
-    margin-bottom: 5px;
+    padding: clamp(10px, 2.5vw, 12px) clamp(12px, 3vw, 15px);
+    margin-bottom: 8px;
     background-color: #f5f5f5;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
     transition: background-color 0.3s;
+    font-size: clamp(14px, 4vw, 15px);
+    min-height: 44px; /* Минимальный размер для тапа */
 }
 
-.custom-category:hover {
+.custom-category:active {
     background-color: #e8e8e8;
 }
 
 .custom-category.active {
     background-color: #e8e8e8;
-    font-weight: bold;
+    font-weight: 600;
     border-left: 3px solid #ff0000;
 }
 
 .custom-category .delete-category {
     color: #999;
     cursor: pointer;
-    padding: 5px;
+    padding: 10px;
+    margin: -10px;
+    font-size: 16px;
 }
 
-.custom-category .delete-category:hover {
+.custom-category .delete-category:active {
     color: #ff0000;
 }
 
 .add-category-btn {
     width: 100%;
-    padding: 10px;
+    padding: clamp(12px, 3vw, 15px);
     background-color: transparent;
-    border: 1px dashed #999;
-    border-radius: 5px;
+    border: 2px dashed #999;
+    border-radius: 8px;
     cursor: pointer;
     color: #666;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
-    transition: background-color 0.3s;
+    gap: 8px;
+    transition: all 0.3s;
+    font-size: clamp(14px, 4vw, 16px);
+    min-height: 48px;
 }
 
-.add-category-btn:hover {
+.add-category-btn:active {
     background-color: #f5f5f5;
+    border-color: #666;
 }
 
-/* Сетка видео */
+/* ===== СЕТКА ВИДЕО ===== */
 .videos-grid {
     flex: 1;
-    padding: 20px;
+    padding: clamp(10px, 3vw, 20px);
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
+    gap: clamp(10px, 2.5vw, 20px);
     align-content: start;
+    width: 100%;
 }
 
 .video-card {
     background-color: white;
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     transition: transform 0.3s, box-shadow 0.3s;
     cursor: pointer;
     position: relative;
+    -webkit-touch-callout: none; /* Запрет вызова контекстного меню */
+    width: 100%;
 }
 
-.video-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+.video-card:active {
+    transform: scale(0.98);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .thumbnail {
     position: relative;
     aspect-ratio: 16/9;
     overflow: hidden;
+    background-color: #000;
 }
 
 .thumbnail img {
@@ -231,131 +353,131 @@ header {
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s;
+    display: block;
 }
 
-.video-card:hover .thumbnail img {
+.video-card:active .thumbnail img {
     transform: scale(1.05);
 }
 
-/* Кнопки редактирования и удаления */
+/* Кнопки действий на карточке */
 .video-actions {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 8px;
+    right: 8px;
     display: flex;
     gap: 8px;
-    opacity: 0;
-    transition: opacity 0.3s;
     z-index: 20;
-}
-
-.video-card:hover .video-actions {
-    opacity: 1;
 }
 
 .edit-video-btn,
 .delete-video-btn {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border: none;
     border-radius: 50%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0,0,0,0.7);
     color: white;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
-    transition: all 0.3s;
-    backdrop-filter: blur(2px);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    font-size: 18px;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
-.edit-video-btn:hover {
+.edit-video-btn:active,
+.delete-video-btn:active {
+    transform: scale(0.9);
+}
+
+.edit-video-btn:active {
     background-color: #4CAF50;
-    transform: scale(1.1);
 }
 
-.delete-video-btn:hover {
+.delete-video-btn:active {
     background-color: #f44336;
-    transform: scale(1.1);
 }
 
-/* Бейдж с типом видео */
+/* Бейдж типа видео */
 .video-type-badge {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.7rem;
+    top: 8px;
+    left: 8px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
     font-weight: bold;
     text-transform: uppercase;
     z-index: 15;
     box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    background-color: rgba(0,0,0,0.7);
+    color: white;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 
 .video-type-badge.vk {
-    background-color: #4A76A8;
-    color: white;
+    background-color: rgba(74, 118, 168, 0.9);
 }
-
 .video-type-badge.youtube {
-    background-color: #FF0000;
-    color: white;
+    background-color: rgba(255, 0, 0, 0.9);
 }
-
 .video-type-badge.tiktok {
-    background-color: #000000;
-    color: white;
+    background-color: rgba(0, 0, 0, 0.9);
 }
-
-.video-type-badge.other {
-    background-color: #666666;
-    color: white;
+.video-type-badge.local {
+    background-color: rgba(76, 175, 80, 0.9);
 }
 
 .duration {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
+    bottom: 8px;
+    right: 8px;
     background-color: rgba(0,0,0,0.8);
     color: white;
-    padding: 3px 6px;
-    border-radius: 3px;
-    font-size: 0.8rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
     z-index: 5;
+    backdrop-filter: blur(2px);
 }
 
 .video-info {
-    padding: 12px;
+    padding: clamp(10px, 2.5vw, 15px);
 }
 
 .video-title {
-    font-size: 1rem;
+    font-size: clamp(14px, 4vw, 16px);
     margin-bottom: 8px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     line-height: 1.4;
+    font-weight: 500;
 }
 
 .video-meta {
     display: flex;
     justify-content: space-between;
     color: #666;
-    font-size: 0.9rem;
+    font-size: clamp(12px, 3.5vw, 14px);
+    flex-wrap: wrap;
+    gap: 5px;
 }
 
 .video-category {
     background-color: #f0f0f0;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 0.8rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
 }
 
-/* Модальные окна */
+/* ===== МОДАЛЬНЫЕ ОКНА ===== */
 .modal {
     display: none;
     position: fixed;
@@ -366,22 +488,27 @@ header {
     background-color: rgba(0,0,0,0.7);
     z-index: 1000;
     backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .modal-content {
     background-color: white;
-    margin: 50px auto;
-    padding: 30px;
+    margin: 20px auto;
+    padding: clamp(20px, 5vw, 30px);
     width: 90%;
     max-width: 600px;
-    border-radius: 10px;
+    border-radius: 20px;
     position: relative;
     animation: modalSlideIn 0.3s ease;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 @keyframes modalSlideIn {
     from {
-        transform: translateY(-50px);
+        transform: translateY(30px);
         opacity: 0;
     }
     to {
@@ -391,28 +518,37 @@ header {
 }
 
 .player-modal .modal-content {
-    max-width: 900px;
+    max-width: 1000px;
     background-color: #1a1a1a;
     color: white;
+    padding: 15px;
 }
 
 .close, .close-player {
     position: absolute;
-    right: 20px;
+    right: 15px;
     top: 10px;
-    font-size: 28px;
+    font-size: 30px;
     font-weight: bold;
     color: #999;
     cursor: pointer;
     transition: color 0.3s;
     z-index: 10;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
 }
 
 .close-player {
     color: white;
 }
 
-.close:hover, .close-player:hover {
+.close:active,
+.close-player:active {
     color: #ff0000;
 }
 
@@ -422,85 +558,143 @@ header {
 
 .form-group label {
     display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
+    margin-bottom: 8px;
+    font-weight: 600;
     color: #333;
+    font-size: clamp(14px, 4vw, 16px);
 }
 
 .form-group input,
 .form-group select {
     width: 100%;
-    padding: 10px;
+    padding: clamp(12px, 3vw, 15px);
     border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 1rem;
+    border-radius: 10px;
+    font-size: clamp(16px, 4vw, 16px); /* Увеличен для удобства на мобильных */
+    outline: none;
     transition: border-color 0.3s;
+    background: white;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .form-group input:focus,
 .form-group select:focus {
-    outline: none;
     border-color: #ff0000;
+}
+
+.form-group input[type="file"] {
+    padding: 10px;
+    background: #f9f9f9;
+}
+
+.hint {
+    display: block;
+    color: #666;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.form-divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+}
+
+.form-divider::before,
+.form-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 45%;
+    height: 1px;
+    background-color: #ddd;
+}
+
+.form-divider::before {
+    left: 0;
+}
+
+.form-divider::after {
+    right: 0;
+}
+
+.form-divider span {
+    background-color: white;
+    padding: 0 10px;
+    color: #999;
+    font-size: 14px;
 }
 
 .submit-btn {
     width: 100%;
-    padding: 12px;
+    padding: clamp(14px, 4vw, 16px);
     background-color: #ff0000;
     color: white;
     border: none;
-    border-radius: 5px;
-    font-size: 1rem;
+    border-radius: 10px;
+    font-size: clamp(16px, 4vw, 18px);
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s;
+    font-weight: 600;
+    min-height: 52px;
 }
 
-.submit-btn:hover {
+.submit-btn:active {
+    transform: scale(0.98);
     background-color: #cc0000;
 }
 
-/* Видео плеер */
+/* ===== ВИДЕО ПЛЕЕР ===== */
 .video-player-container {
     width: 100%;
     background-color: black;
-    min-height: 300px;
-    border-radius: 5px;
+    min-height: 200px;
+    border-radius: 10px;
     overflow: hidden;
 }
 
 .video-player-container iframe {
     width: 100%;
-    height: 500px;
+    height: clamp(200px, 50vh, 500px);
     border: none;
+    display: block;
 }
 
 #videoPlayer {
     width: 100%;
     max-height: 70vh;
+    display: block;
 }
 
 .player-modal .video-info {
     color: white;
-    padding: 15px;
+    padding: 15px 10px;
 }
 
 .player-modal .video-stats {
     display: flex;
-    gap: 20px;
+    gap: clamp(10px, 3vw, 20px);
     margin-top: 10px;
     color: #ccc;
+    font-size: clamp(12px, 3.5vw, 14px);
+    flex-wrap: wrap;
 }
 
-/* Пустое состояние */
+#videoFileInfo {
+    color: #4CAF50;
+}
+
+/* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
 .empty-state {
     grid-column: 1 / -1;
     text-align: center;
-    padding: 50px;
+    padding: clamp(30px, 10vw, 60px) 20px;
     color: #999;
 }
 
 .empty-state i {
-    font-size: 4rem;
+    font-size: clamp(48px, 15vw, 64px);
     margin-bottom: 20px;
     color: #ddd;
 }
@@ -508,57 +702,169 @@ header {
 .empty-state h3 {
     margin-bottom: 10px;
     color: #666;
+    font-size: clamp(18px, 5vw, 24px);
 }
 
-/* Адаптивность */
-@media (max-width: 768px) {
-    .sidebar {
-        display: none;
-    }
-    
-    .search-bar {
-        flex: 0 1 300px;
+.empty-state p {
+    font-size: clamp(14px, 4vw, 16px);
+}
+
+/* ===== МЕДИА-ЗАПРОСЫ ДЛЯ РАЗНЫХ УСТРОЙСТВ ===== */
+
+/* Маленькие телефоны (до 360px) */
+@media (max-width: 360px) {
+    .videos-grid {
+        grid-template-columns: 1fr;
     }
     
     .logo h1 {
         display: none;
     }
     
-    .video-player-container iframe {
-        height: 300px;
+    .search-bar input {
+        font-size: 14px;
+    }
+}
+
+/* Телефоны среднего размера (361px - 480px) */
+@media (min-width: 361px) and (max-width: 480px) {
+    .videos-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Большие телефоны и фаблеты (481px - 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    .videos-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Планшеты (769px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .videos-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Мобильные устройства (все до 768px) */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 200;
+        transform: translateX(-100%);
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        width: 85%;
+        max-width: 320px;
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .sidebar-header {
+        display: flex;
+    }
+    
+    .mobile-menu-toggle {
+        display: flex;
+    }
+    
+    .main-content {
+        min-height: calc(100vh - 60px);
+    }
+    
+    header {
+        padding: 8px 12px;
+    }
+    
+    .logo h1 {
+        font-size: 1.2rem;
     }
     
     .video-actions {
         opacity: 1;
-        background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
-        padding: 10px;
-        top: 0;
-        right: 0;
-        left: 0;
-        justify-content: flex-end;
+    }
+    
+    .edit-video-btn,
+    .delete-video-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 10px auto;
+        padding: 15px;
+    }
+    
+    .video-player-container iframe {
+        height: 40vh;
+    }
+    
+    .video-type-badge {
+        font-size: 11px;
+        padding: 3px 8px;
     }
 }
 
-/* Стили для ссылок в плеере */
-.video-player-container a {
-    text-decoration: none;
-    transition: transform 0.3s;
-}
-
-.video-player-container a:hover {
-    transform: scale(1.05);
-}
-
-/* Анимации */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
+/* Специфичные разрешения */
+@media (width: 2340px) and (height: 1080px) {
+    /* Специфичные стили для 2340x1080 */
+    .videos-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
     }
-    to {
-        opacity: 1;
+    
+    .video-card {
+        border-radius: 16px;
+    }
+    
+    .video-title {
+        font-size: 18px;
     }
 }
 
-.video-card {
-    animation: fadeIn 0.5s ease;
+/* Большие планшеты и десктопы */
+@media (min-width: 1025px) and (max-width: 1440px) {
+    .videos-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* 2K и 4K мониторы */
+@media (min-width: 1441px) {
+    .videos-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 25px;
+        padding: 25px;
+    }
+    
+    .video-title {
+        font-size: 18px;
+    }
+}
+
+/* Поддержка темной темы (опционально) */
+@media (prefers-color-scheme: dark) {
+    body.dark-theme {
+        background-color: #1a1a1a;
+        color: #fff;
+    }
+}
+
+/* Учет выреза в современных телефонах (notch) */
+@supports (padding: max(0px)) {
+    .modal-content {
+        padding-left: max(20px, env(safe-area-inset-left));
+        padding-right: max(20px, env(safe-area-inset-right));
+    }
+    
+    .sidebar {
+        padding-top: env(safe-area-inset-top);
+    }
 }
