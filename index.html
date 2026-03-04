@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Saver - Моя коллекция</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Шапка -->
+        <header>
+            <div class="logo">
+                <i class="fas fa-video"></i>
+                <h1>Video Saver</h1>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Поиск видео...">
+                <button id="searchBtn"><i class="fas fa-search"></i></button>
+            </div>
+            <button class="add-video-btn" id="addVideoBtn">
+                <i class="fas fa-plus"></i> Добавить видео
+            </button>
+        </header>
+
+        <!-- Основной контент -->
+        <div class="main-content">
+            <!-- Сайдбар с категориями -->
+            <aside class="sidebar">
+                <nav>
+                    <ul>
+                        <li class="active" data-category="all">
+                            <i class="fas fa-home"></i> Все видео
+                        </li>
+                        <li data-category="tiktok">
+                            <i class="fab fa-tiktok"></i> TikTok
+                        </li>
+                        <li data-category="youtube">
+                            <i class="fab fa-youtube"></i> YouTube Shorts
+                        </li>
+                        <li data-category="edits">
+                            <i class="fas fa-cut"></i> Edit'ы
+                        </li>
+                    </ul>
+                </nav>
+                <div class="categories-section">
+                    <h3>Мои категории</h3>
+                    <div id="customCategories"></div>
+                    <button id="addCategoryBtn" class="add-category-btn">
+                        <i class="fas fa-plus"></i> Новая категория
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Сетка видео -->
+            <main class="videos-grid" id="videosGrid">
+                <!-- Видео будут загружаться сюда -->
+            </main>
+        </div>
+
+        <!-- Модальное окно для добавления видео -->
+        <div id="videoModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Добавить видео</h2>
+                <form id="videoForm">
+                    <div class="form-group">
+                        <label for="videoUrl">Ссылка на видео:</label>
+                        <input type="url" id="videoUrl" required placeholder="https://...">
+                    </div>
+                    <div class="form-group">
+                        <label for="videoTitle">Название:</label>
+                        <input type="text" id="videoTitle" required placeholder="Введите название">
+                    </div>
+                    <div class="form-group">
+                        <label for="videoCategory">Категория:</label>
+                        <select id="videoCategory" required>
+                            <option value="tiktok">TikTok</option>
+                            <option value="youtube">YouTube Shorts</option>
+                            <option value="edits">Edit'ы</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="videoThumbnail">Миниатюра (URL):</label>
+                        <input type="url" id="videoThumbnail" placeholder="https://... (опционально)">
+                    </div>
+                    <button type="submit" class="submit-btn">Сохранить видео</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Модальное окно просмотра видео -->
+        <div id="playerModal" class="modal player-modal">
+            <div class="modal-content player-content">
+                <span class="close-player">&times;</span>
+                <div class="video-player-container">
+                    <video id="videoPlayer" controls>
+                        <source src="" type="video/mp4">
+                        Ваш браузер не поддерживает видео.
+                    </video>
+                </div>
+                <div class="video-info">
+                    <h3 id="playerVideoTitle"></h3>
+                    <div class="video-stats">
+                        <span><i class="fas fa-eye"></i> <span id="viewCount">0</span> просмотров</span>
+                        <span><i class="fas fa-calendar"></i> <span id="videoDate"></span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
