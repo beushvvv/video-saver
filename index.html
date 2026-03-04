@@ -45,6 +45,9 @@
                         <li data-category="edits">
                             <i class="fas fa-cut"></i> Edit'ы
                         </li>
+                        <li data-category="local">
+                            <i class="fas fa-download"></i> Мои видео
+                        </li>
                     </ul>
                 </nav>
                 <div class="categories-section">
@@ -69,13 +72,31 @@
                 <h2>Добавить видео</h2>
                 <form id="videoForm">
                     <div class="form-group">
-                        <label for="videoUrl">Ссылка на видео:</label>
-                        <input type="url" id="videoUrl" required placeholder="https://...">
+                        <label for="videoUrl">Ссылка на видео (из интернета):</label>
+                        <input type="url" id="videoUrl" placeholder="https://...">
+                        <small style="color: #666; display: block; margin-top: 5px;">Для YouTube, VK, TikTok</small>
                     </div>
+                    
+                    <div class="form-divider">
+                        <span>или</span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="videoFile">Загрузить видео с компьютера:</label>
+                        <input type="file" id="videoFile" accept="video/*">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            ⚡ Видео сохранится в браузере и будет доступно даже после удаления с ПК
+                        </small>
+                        <small style="color: #ff6b6b; display: block; margin-top: 5px;">
+                            📌 Макс. размер: 50 МБ (поддержка MP4, WebM, AVI)
+                        </small>
+                    </div>
+
                     <div class="form-group">
                         <label for="videoTitle">Название:</label>
                         <input type="text" id="videoTitle" required placeholder="Введите название">
                     </div>
+                    
                     <div class="form-group">
                         <label for="videoCategory">Категория:</label>
                         <select id="videoCategory" required>
@@ -83,12 +104,15 @@
                             <option value="youtube">YouTube Shorts</option>
                             <option value="vk">VK Видео</option>
                             <option value="edits">Edit'ы</option>
+                            <option value="local">Мои видео</option>
                         </select>
                     </div>
+                    
                     <div class="form-group">
                         <label for="videoThumbnail">Миниатюра (URL):</label>
-                        <input type="url" id="videoThumbnail" placeholder="https://... (опционально)">
+                        <input type="url" id="videoThumbnail" placeholder="https://... (оставьте пустым для авто)">
                     </div>
+                    
                     <button type="submit" class="submit-btn">Сохранить видео</button>
                 </form>
             </div>
@@ -106,6 +130,7 @@
                     <div class="video-stats">
                         <span><i class="fas fa-eye"></i> <span id="viewCount">0</span> просмотров</span>
                         <span><i class="fas fa-calendar"></i> <span id="videoDate"></span></span>
+                        <span id="videoFileInfo" style="display: none;"></span>
                     </div>
                 </div>
             </div>

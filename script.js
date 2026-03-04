@@ -9,11 +9,17 @@ class VideoSaver {
         this.storageKey = 'videoSaverData';
         this.categoriesKey = 'videoSaverCategories';
         
-        // Более надежные заглушки для изображений (используем data:image)
+        // Настройки IndexedDB
+        this.dbName = 'VideoSaverDB';
+        this.dbVersion = 1;
+        this.db = null;
+        
+        // Заглушки для изображений
         this.defaultThumbnails = {
             youtube: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%23FF0000\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3EYoutube%3C/text%3E%3C/svg%3E',
             tiktok: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%23000000\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3ETikTok%3C/text%3E%3C/svg%3E',
             vk: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%234A76A8\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3EVK%3C/text%3E%3C/svg%3E',
+            local: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%234CAF50\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3EЛокальное%3C/text%3E%3C/svg%3E',
             other: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%23666666\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3EVideo%3C/text%3E%3C/svg%3E'
         };
         
@@ -28,11 +34,40 @@ class VideoSaver {
         }
     }
     
-    setup() {
+    async setup() {
+        await this.initDB();
         this.loadData();
         this.bindEvents();
         this.render();
         this.setupCategorySelect();
+    }
+    
+    initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, this.dbVersion);
+            
+            request.onerror = (event) => {
+                console.error('Ошибка открытия БД:', event);
+                reject(event);
+            };
+            
+            request.onsuccess = (event) => {
+                this.db = event.target.result;
+                console.log('✅ IndexedDB готова к работе');
+                resolve();
+            };
+            
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                
+                if (!db.objectStoreNames.contains('videos')) {
+                    const store = db.createObjectStore('videos', { keyPath: 'id' });
+                    store.createIndex('filename', 'filename', { unique: false });
+                    store.createIndex('date', 'uploaded', { unique: false });
+                    console.log('📁 Создано хранилище для видео');
+                }
+            };
+        });
     }
     
     loadData() {
@@ -72,7 +107,8 @@ class VideoSaver {
             { value: 'tiktok', text: 'TikTok' },
             { value: 'youtube', text: 'YouTube Shorts' },
             { value: 'vk', text: 'VK Видео' },
-            { value: 'edits', text: 'Edit\'ы' }
+            { value: 'edits', text: 'Edit\'ы' },
+            { value: 'local', text: 'Мои видео' }
         ];
         
         standardCategories.forEach(cat => {
@@ -152,6 +188,7 @@ class VideoSaver {
         if (url.includes('youtube.com/shorts/') || url.includes('youtu.be/shorts/') || 
             url.includes('youtube.com/watch') || url.includes('youtu.be')) return 'youtube';
         if (url.includes('vk.com/video')) return 'vk';
+        if (url.startsWith('video_')) return 'local';
         return 'other';
     }
     
@@ -196,17 +233,130 @@ class VideoSaver {
         return this.defaultThumbnails[type] || this.defaultThumbnails.other;
     }
     
-    addVideo() {
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Б';
+        const k = 1024;
+        const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    async uploadVideoFile(file, videoData) {
+        return new Promise((resolve, reject) => {
+            // Проверка размера (50 МБ максимум)
+            if (file.size > 50 * 1024 * 1024) {
+                reject(new Error('Файл слишком большой. Максимальный размер: 50 МБ'));
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = async (e) => {
+                const videoBlob = e.target.result;
+                const videoId = Date.now();
+                
+                // Сохраняем в IndexedDB
+                const transaction = this.db.transaction(['videos'], 'readwrite');
+                const store = transaction.objectStore('videos');
+                
+                const videoEntry = {
+                    id: videoId,
+                    filename: file.name,
+                    data: videoBlob,
+                    type: file.type || 'video/mp4',
+                    size: file.size,
+                    uploaded: new Date().toISOString()
+                };
+                
+                const request = store.add(videoEntry);
+                
+                request.onsuccess = () => {
+                    // Создаем объект видео для основного списка
+                    const newVideo = {
+                        id: videoId,
+                        url: `video_${videoId}`,
+                        title: videoData.title || file.name,
+                        category: videoData.category || 'local',
+                        thumbnail: videoData.thumbnail || this.defaultThumbnails.local,
+                        views: 0,
+                        date: new Date().toLocaleDateString('ru-RU'),
+                        type: 'local',
+                        filename: file.name,
+                        size: this.formatFileSize(file.size)
+                    };
+                    
+                    this.videos.unshift(newVideo);
+                    this.saveData();
+                    this.render();
+                    
+                    resolve(newVideo);
+                };
+                
+                request.onerror = (err) => reject(err);
+            };
+            
+            reader.onerror = (err) => reject(err);
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    getLocalVideo(videoId) {
+        return new Promise((resolve, reject) => {
+            if (!this.db) {
+                reject('База данных не инициализирована');
+                return;
+            }
+            
+            const transaction = this.db.transaction(['videos'], 'readonly');
+            const store = transaction.objectStore('videos');
+            const request = store.get(videoId);
+            
+            request.onsuccess = () => {
+                if (request.result) {
+                    resolve(request.result);
+                } else {
+                    reject('Видео не найдено в хранилище');
+                }
+            };
+            
+            request.onerror = (err) => reject(err);
+        });
+    }
+    
+    async addVideo() {
         const urlInput = document.getElementById('videoUrl');
+        const fileInput = document.getElementById('videoFile');
         const titleInput = document.getElementById('videoTitle');
         const categorySelect = document.getElementById('videoCategory');
         const thumbnailInput = document.getElementById('videoThumbnail');
         
-        if (!urlInput || !urlInput.value) {
-            alert('Введите ссылку на видео');
+        // Проверяем, что хоть что-то заполнено
+        if ((!urlInput || !urlInput.value) && (!fileInput || !fileInput.files.length)) {
+            alert('Введите ссылку на видео или выберите файл');
             return;
         }
         
+        // Если выбран файл, загружаем его
+        if (fileInput && fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            
+            try {
+                const videoData = {
+                    title: titleInput?.value || file.name,
+                    category: categorySelect?.value || 'local',
+                    thumbnail: thumbnailInput?.value
+                };
+                
+                await this.uploadVideoFile(file, videoData);
+                this.closeModal('videoModal');
+                this.resetForm();
+            } catch (error) {
+                alert('Ошибка при загрузке файла: ' + error.message);
+            }
+            return;
+        }
+        
+        // Логика для ссылок
         const url = urlInput.value;
         const title = titleInput?.value || 'Без названия';
         const category = categorySelect?.value || 'other';
@@ -241,11 +391,20 @@ class VideoSaver {
         this.editingVideoId = videoId;
         
         const urlInput = document.getElementById('videoUrl');
+        const fileInput = document.getElementById('videoFile');
         const titleInput = document.getElementById('videoTitle');
         const categorySelect = document.getElementById('videoCategory');
         const thumbnailInput = document.getElementById('videoThumbnail');
         
-        if (urlInput) urlInput.value = video.url || '';
+        if (urlInput) {
+            urlInput.value = video.type === 'local' ? '' : (video.url || '');
+            urlInput.disabled = video.type === 'local';
+        }
+        
+        if (fileInput) {
+            fileInput.disabled = video.type !== 'local';
+        }
+        
         if (titleInput) titleInput.value = video.title || '';
         if (categorySelect) categorySelect.value = video.category || 'other';
         if (thumbnailInput) thumbnailInput.value = video.thumbnail || '';
@@ -272,11 +431,9 @@ class VideoSaver {
         
         this.videos[videoIndex] = {
             ...this.videos[videoIndex],
-            url: urlInput?.value || this.videos[videoIndex].url,
             title: titleInput?.value || this.videos[videoIndex].title,
             category: categorySelect?.value || this.videos[videoIndex].category,
             thumbnail: thumbnailInput?.value || this.videos[videoIndex].thumbnail,
-            type: this.getVideoType(urlInput?.value)
         };
         
         this.saveData();
@@ -285,8 +442,21 @@ class VideoSaver {
         this.resetForm();
     }
     
-    deleteVideo(videoId) {
+    async deleteVideo(videoId) {
         if (confirm('Вы уверены, что хотите удалить это видео?')) {
+            const video = this.videos.find(v => v.id === videoId);
+            
+            // Если видео локальное, удаляем из IndexedDB
+            if (video && video.type === 'local' && this.db) {
+                try {
+                    const transaction = this.db.transaction(['videos'], 'readwrite');
+                    const store = transaction.objectStore('videos');
+                    store.delete(videoId);
+                } catch (error) {
+                    console.error('Ошибка при удалении из БД:', error);
+                }
+            }
+            
             this.videos = this.videos.filter(v => v.id !== videoId);
             this.saveData();
             this.render();
@@ -296,6 +466,12 @@ class VideoSaver {
     resetForm() {
         const form = document.getElementById('videoForm');
         if (form) form.reset();
+        
+        const urlInput = document.getElementById('videoUrl');
+        const fileInput = document.getElementById('videoFile');
+        
+        if (urlInput) urlInput.disabled = false;
+        if (fileInput) fileInput.disabled = false;
         
         this.editingVideoId = null;
         
@@ -371,7 +547,7 @@ class VideoSaver {
         window.open(video.url, '_blank', 'noopener,noreferrer');
     }
     
-    playVideo(video) {
+    async playVideo(video) {
         if (!video) return;
         
         this.currentVideo = video;
@@ -382,12 +558,52 @@ class VideoSaver {
         const playerTitle = document.getElementById('playerVideoTitle');
         const viewCount = document.getElementById('viewCount');
         const videoDate = document.getElementById('videoDate');
+        const videoFileInfo = document.getElementById('videoFileInfo');
         
         if (!playerContainer) return;
         
         playerContainer.innerHTML = '';
+        if (videoFileInfo) videoFileInfo.style.display = 'none';
         
-        if (video.type === 'youtube') {
+        if (video.type === 'local') {
+            try {
+                const localVideo = await this.getLocalVideo(video.id);
+                
+                const videoElement = document.createElement('video');
+                videoElement.id = 'videoPlayer';
+                videoElement.controls = true;
+                videoElement.autoplay = true;
+                videoElement.style.width = '100%';
+                videoElement.style.maxHeight = '70vh';
+                
+                const source = document.createElement('source');
+                source.src = localVideo.data;
+                source.type = localVideo.type || 'video/mp4';
+                
+                videoElement.appendChild(source);
+                videoElement.appendChild(document.createTextNode('Ваш браузер не поддерживает видео.'));
+                
+                playerContainer.appendChild(videoElement);
+                
+                // Добавляем информацию о файле
+                if (videoFileInfo) {
+                    videoFileInfo.style.display = 'inline';
+                    videoFileInfo.innerHTML = `
+                        <i class="fas fa-hdd"></i> ${video.filename || 'Локальное видео'} (${video.size || 'неизвестно'})
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Ошибка загрузки локального видео:', error);
+                playerContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px; background: #ff4444; color: white; border-radius: 10px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px;"></i>
+                        <p style="font-size: 18px; margin-bottom: 20px;">Ошибка загрузки видео из хранилища</p>
+                        <p style="font-size: 14px; opacity: 0.9;">Видео могло быть повреждено или удалено</p>
+                    </div>
+                `;
+            }
+        } else if (video.type === 'youtube') {
             const videoId = this.getYouTubeId(video.url);
             if (videoId) {
                 const iframe = document.createElement('iframe');
@@ -400,7 +616,7 @@ class VideoSaver {
                 playerContainer.appendChild(iframe);
             } else {
                 playerContainer.innerHTML = `
-                    <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, #FF0000, #CC0000); border-radius: 10px;">
+                    <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #FF0000, #CC0000); border-radius: 10px;">
                         <i class="fab fa-youtube" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
                         <p style="color: white; font-size: 18px; margin-bottom: 25px;">Не удалось загрузить видео</p>
                         <a href="${this.escapeHtml(video.url)}" target="_blank" 
@@ -414,74 +630,29 @@ class VideoSaver {
                     </div>
                 `;
             }
-        } 
-        else if (video.type === 'vk') {
-            const vkMatch = video.url.match(/video(-?\d+)_(\d+)/);
+        } else {
+            // Для VK, TikTok и других - показываем красивую кнопку перехода
+            const colors = {
+                vk: { bg: 'linear-gradient(135deg, #4A76A8, #2A4F7C)', icon: 'fab fa-vk', text: 'VK' },
+                tiktok: { bg: 'linear-gradient(135deg, #25F4EE, #FE2C55)', icon: 'fab fa-tiktok', text: 'TikTok' },
+                other: { bg: 'linear-gradient(135deg, #666666, #333333)', icon: 'fas fa-external-link-alt', text: 'ссылку' }
+            };
             
-            if (vkMatch) {
-                const ownerId = vkMatch[1];
-                const videoId = vkMatch[2];
-                const vkDirectUrl = `https://vk.com/video${ownerId}_${videoId}`;
-                
-                playerContainer.innerHTML = `
-                    <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, #4A76A8, #2A4F7C); border-radius: 10px;">
-                        <i class="fab fa-vk" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
-                        <p style="color: white; font-size: 18px; margin-bottom: 25px;">Для просмотра видео откройте его в VK</p>
-                        <a href="${vkDirectUrl}" target="_blank" 
-                           style="display: inline-block; padding: 15px 40px; background: white; color: #4A76A8; 
-                                  text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;
-                                  transition: transform 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"
-                           onmouseover="this.style.transform='scale(1.05)'"
-                           onmouseout="this.style.transform='scale(1)'">
-                            <i class="fab fa-vk"></i> Открыть ВКонтакте
-                        </a>
-                    </div>
-                `;
-            } else {
-                playerContainer.innerHTML = `
-                    <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, #4A76A8, #2A4F7C); border-radius: 10px;">
-                        <i class="fab fa-vk" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
-                        <p style="color: white; font-size: 18px; margin-bottom: 25px;">Некорректная ссылка VK</p>
-                        <a href="${this.escapeHtml(video.url)}" target="_blank" 
-                           style="display: inline-block; padding: 15px 40px; background: white; color: #4A76A8; 
-                                  text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;
-                                  transition: transform 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"
-                           onmouseover="this.style.transform='scale(1.05)'"
-                           onmouseout="this.style.transform='scale(1)'">
-                            <i class="fab fa-vk"></i> Открыть ссылку
-                        </a>
-                    </div>
-                `;
-            }
-        } 
-        else if (video.type === 'tiktok') {
+            const style = colors[video.type] || colors.other;
+            
             playerContainer.innerHTML = `
-                <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, #25F4EE, #FE2C55); border-radius: 10px;">
-                    <i class="fab fa-tiktok" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
-                    <p style="color: white; font-size: 18px; margin-bottom: 25px;">Видео TikTok откроется в новой вкладке</p>
+                <div style="text-align: center; padding: 40px; background: ${style.bg}; border-radius: 10px;">
+                    <i class="${style.icon}" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
+                    <p style="color: white; font-size: 18px; margin-bottom: 25px;">
+                        Видео откроется в новой вкладке
+                    </p>
                     <a href="${this.escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer"
-                       style="display: inline-block; padding: 15px 40px; background: white; color: #000; 
+                       style="display: inline-block; padding: 15px 40px; background: white; 
                               text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;
                               transition: transform 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"
                        onmouseover="this.style.transform='scale(1.05)'"
                        onmouseout="this.style.transform='scale(1)'">
-                        <i class="fab fa-tiktok"></i> Открыть TikTok
-                    </a>
-                </div>
-            `;
-        } 
-        else {
-            playerContainer.innerHTML = `
-                <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, #666666, #333333); border-radius: 10px;">
-                    <i class="fas fa-video" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
-                    <p style="color: white; font-size: 18px; margin-bottom: 25px;">Неподдерживаемый тип видео</p>
-                    <a href="${this.escapeHtml(video.url)}" target="_blank" 
-                       style="display: inline-block; padding: 15px 40px; background: white; color: #333; 
-                              text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;
-                              transition: transform 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"
-                       onmouseover="this.style.transform='scale(1.05)'"
-                       onmouseout="this.style.transform='scale(1)'">
-                        <i class="fas fa-external-link-alt"></i> Открыть ссылку
+                        <i class="${style.icon}"></i> Открыть ${style.text}
                     </a>
                 </div>
             `;
@@ -554,6 +725,7 @@ class VideoSaver {
         
         const videosToRender = filteredVideos || this.videos.filter(video => {
             if (this.currentCategory === 'all') return true;
+            if (this.currentCategory === 'local' && video.type === 'local') return true;
             return video.category === this.currentCategory;
         });
         
@@ -577,7 +749,10 @@ class VideoSaver {
                          onerror="this.onerror=null; this.src='${this.defaultThumbnails[video.type] || this.defaultThumbnails.other}'">
                     <span class="duration">${video.duration || '00:00'}</span>
                     <div class="video-type-badge ${video.type || 'other'}">
-                        ${video.type === 'vk' ? 'VK' : video.type === 'youtube' ? 'YT' : video.type === 'tiktok' ? 'TT' : ''}
+                        ${video.type === 'vk' ? 'VK' : 
+                          video.type === 'youtube' ? 'YT' : 
+                          video.type === 'tiktok' ? 'TT' : 
+                          video.type === 'local' ? '💾' : ''}
                     </div>
                     <div class="video-actions">
                         <button class="edit-video-btn" onclick="event.stopPropagation(); videoSaver.editVideo(${video.id})">
@@ -594,6 +769,9 @@ class VideoSaver {
                         <span><i class="fas fa-eye"></i> ${video.views || 0}</span>
                         <span class="video-category">${this.escapeHtml(this.getCategoryName(video.category))}</span>
                     </div>
+                    ${video.size ? `<div style="font-size: 11px; color: #999; margin-top: 5px;">
+                        <i class="fas fa-hdd"></i> ${video.size}
+                    </div>` : ''}
                 </div>
             </div>
         `).join('');
@@ -605,12 +783,7 @@ class VideoSaver {
                 }
                 const video = this.videos.find(v => v.id === parseInt(card.dataset.id));
                 if (video) {
-                    // Для YouTube открываем в плеере, для остальных - в новой вкладке
-                    if (video.type === 'youtube') {
-                        this.playVideo(video);
-                    } else {
-                        this.openVideoLink(video);
-                    }
+                    this.playVideo(video);
                 }
             });
         });
@@ -622,6 +795,7 @@ class VideoSaver {
         if (categoryId === 'youtube') return 'YouTube Shorts';
         if (categoryId === 'edits') return 'Edit\'ы';
         if (categoryId === 'vk') return 'VK Видео';
+        if (categoryId === 'local') return 'Мои видео';
         if (categoryId.startsWith('custom_')) {
             const id = parseInt(categoryId.replace('custom_', ''));
             const category = this.customCategories.find(c => c.id === id);
