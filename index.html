@@ -39,6 +39,9 @@
                         <li data-category="youtube">
                             <i class="fab fa-youtube"></i> YouTube Shorts
                         </li>
+                        <li data-category="vk">
+                            <i class="fab fa-vk"></i> VK Видео
+                        </li>
                         <li data-category="edits">
                             <i class="fas fa-cut"></i> Edit'ы
                         </li>
@@ -59,7 +62,7 @@
             </main>
         </div>
 
-        <!-- Модальное окно для добавления видео -->
+        <!-- Модальное окно для добавления/редактирования видео -->
         <div id="videoModal" class="modal">
             <div class="modal-content">
                 <span class="close">&times;</span>
@@ -78,6 +81,7 @@
                         <select id="videoCategory" required>
                             <option value="tiktok">TikTok</option>
                             <option value="youtube">YouTube Shorts</option>
+                            <option value="vk">VK Видео</option>
                             <option value="edits">Edit'ы</option>
                         </select>
                     </div>
@@ -95,10 +99,7 @@
             <div class="modal-content player-content">
                 <span class="close-player">&times;</span>
                 <div class="video-player-container">
-                    <video id="videoPlayer" controls>
-                        <source src="" type="video/mp4">
-                        Ваш браузер не поддерживает видео.
-                    </video>
+                    <!-- Сюда будет вставляться плеер -->
                 </div>
                 <div class="video-info">
                     <h3 id="playerVideoTitle"></h3>

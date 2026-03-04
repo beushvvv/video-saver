@@ -153,15 +153,23 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    transition: background-color 0.3s;
 }
 
 .custom-category:hover {
     background-color: #e8e8e8;
 }
 
+.custom-category.active {
+    background-color: #e8e8e8;
+    font-weight: bold;
+    border-left: 3px solid #ff0000;
+}
+
 .custom-category .delete-category {
     color: #999;
     cursor: pointer;
+    padding: 5px;
 }
 
 .custom-category .delete-category:hover {
@@ -180,6 +188,7 @@ header {
     align-items: center;
     justify-content: center;
     gap: 5px;
+    transition: background-color 0.3s;
 }
 
 .add-category-btn:hover {
@@ -201,8 +210,9 @@ header {
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    transition: transform 0.3s;
+    transition: transform 0.3s, box-shadow 0.3s;
     cursor: pointer;
+    position: relative;
 }
 
 .video-card:hover {
@@ -220,6 +230,89 @@ header {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.video-card:hover .thumbnail img {
+    transform: scale(1.05);
+}
+
+/* Кнопки редактирования и удаления */
+.video-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 20;
+}
+
+.video-card:hover .video-actions {
+    opacity: 1;
+}
+
+.edit-video-btn,
+.delete-video-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all 0.3s;
+    backdrop-filter: blur(2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.edit-video-btn:hover {
+    background-color: #4CAF50;
+    transform: scale(1.1);
+}
+
+.delete-video-btn:hover {
+    background-color: #f44336;
+    transform: scale(1.1);
+}
+
+/* Бейдж с типом видео */
+.video-type-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    z-index: 15;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.video-type-badge.vk {
+    background-color: #4A76A8;
+    color: white;
+}
+
+.video-type-badge.youtube {
+    background-color: #FF0000;
+    color: white;
+}
+
+.video-type-badge.tiktok {
+    background-color: #000000;
+    color: white;
+}
+
+.video-type-badge.other {
+    background-color: #666666;
+    color: white;
 }
 
 .duration {
@@ -231,6 +324,7 @@ header {
     padding: 3px 6px;
     border-radius: 3px;
     font-size: 0.8rem;
+    z-index: 5;
 }
 
 .video-info {
@@ -244,6 +338,7 @@ header {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    line-height: 1.4;
 }
 
 .video-meta {
@@ -270,6 +365,7 @@ header {
     height: 100%;
     background-color: rgba(0,0,0,0.7);
     z-index: 1000;
+    backdrop-filter: blur(5px);
 }
 
 .modal-content {
@@ -280,11 +376,24 @@ header {
     max-width: 600px;
     border-radius: 10px;
     position: relative;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .player-modal .modal-content {
     max-width: 900px;
-    background-color: black;
+    background-color: #1a1a1a;
+    color: white;
 }
 
 .close, .close-player {
@@ -295,11 +404,12 @@ header {
     font-weight: bold;
     color: #999;
     cursor: pointer;
+    transition: color 0.3s;
+    z-index: 10;
 }
 
 .close-player {
     color: white;
-    z-index: 10;
 }
 
 .close:hover, .close-player:hover {
@@ -324,6 +434,13 @@ header {
     border: 1px solid #ddd;
     border-radius: 5px;
     font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #ff0000;
 }
 
 .submit-btn {
@@ -335,6 +452,7 @@ header {
     border-radius: 5px;
     font-size: 1rem;
     cursor: pointer;
+    transition: background-color 0.3s;
 }
 
 .submit-btn:hover {
@@ -345,6 +463,15 @@ header {
 .video-player-container {
     width: 100%;
     background-color: black;
+    min-height: 300px;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.video-player-container iframe {
+    width: 100%;
+    height: 500px;
+    border: none;
 }
 
 #videoPlayer {
@@ -375,45 +502,12 @@ header {
 .empty-state i {
     font-size: 4rem;
     margin-bottom: 20px;
+    color: #ddd;
 }
 
-.video-type-badge {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    z-index: 5;
-}
-
-.video-type-badge.vk {
-    background-color: #4A76A8;
-    color: white;
-}
-
-.video-type-badge.youtube {
-    background-color: #FF0000;
-    color: white;
-}
-
-.video-type-badge.tiktok {
-    background-color: #000000;
-    color: white;
-}
-
-.video-player-container iframe {
-    width: 100%;
-    height: 500px;
-    border: none;
-}
-
-@media (max-width: 768px) {
-    .video-player-container iframe {
-        height: 300px;
-    }
+.empty-state h3 {
+    margin-bottom: 10px;
+    color: #666;
 }
 
 /* Адаптивность */
@@ -429,4 +523,42 @@ header {
     .logo h1 {
         display: none;
     }
+    
+    .video-player-container iframe {
+        height: 300px;
+    }
+    
+    .video-actions {
+        opacity: 1;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
+        padding: 10px;
+        top: 0;
+        right: 0;
+        left: 0;
+        justify-content: flex-end;
+    }
+}
+
+/* Стили для ссылок в плеере */
+.video-player-container a {
+    text-decoration: none;
+    transition: transform 0.3s;
+}
+
+.video-player-container a:hover {
+    transform: scale(1.05);
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.video-card {
+    animation: fadeIn 0.5s ease;
 }
