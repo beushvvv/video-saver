@@ -9,6 +9,14 @@ class VideoSaver {
         this.storageKey = 'videoSaverData';
         this.categoriesKey = 'videoSaverCategories';
         
+        // Более надежные заглушки для изображений (используем data:image)
+        this.defaultThumbnails = {
+            youtube: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%23FF0000\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3EYoutube%3C/text%3E%3C/svg%3E',
+            tiktok: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%23000000\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3ETikTok%3C/text%3E%3C/svg%3E',
+            vk: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%234A76A8\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3EVK%3C/text%3E%3C/svg%3E',
+            other: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%23666666\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3EVideo%3C/text%3E%3C/svg%3E'
+        };
+        
         this.init();
     }
     
@@ -24,6 +32,7 @@ class VideoSaver {
         this.loadData();
         this.bindEvents();
         this.render();
+        this.setupCategorySelect();
     }
     
     loadData() {
@@ -49,7 +58,39 @@ class VideoSaver {
             localStorage.setItem(this.categoriesKey, JSON.stringify(this.customCategories));
         } catch (e) {
             console.error('Ошибка сохранения данных:', e);
+            alert('Не удалось сохранить данные. Возможно, превышен лимит localStorage.');
         }
+    }
+    
+    setupCategorySelect() {
+        const select = document.getElementById('videoCategory');
+        if (!select) return;
+        
+        // Очищаем существующие опции
+        select.innerHTML = '';
+        
+        // Добавляем стандартные категории
+        const standardCategories = [
+            { value: 'tiktok', text: 'TikTok' },
+            { value: 'youtube', text: 'YouTube Shorts' },
+            { value: 'vk', text: 'VK Видео' },
+            { value: 'edits', text: 'Edit\'ы' }
+        ];
+        
+        standardCategories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.value;
+            option.textContent = cat.text;
+            select.appendChild(option);
+        });
+        
+        // Добавляем пользовательские категории
+        this.customCategories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = `custom_${cat.id}`;
+            option.textContent = cat.name;
+            select.appendChild(option);
+        });
     }
     
     bindEvents() {
@@ -69,14 +110,16 @@ class VideoSaver {
         });
         
         const videoForm = document.getElementById('videoForm');
-        if (videoForm) videoForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (this.editingVideoId) {
-                this.updateVideo();
-            } else {
-                this.addVideo();
-            }
-        });
+        if (videoForm) {
+            videoForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (this.editingVideoId) {
+                    this.updateVideo();
+                } else {
+                    this.addVideo();
+                }
+            });
+        }
         
         const searchBtn = document.getElementById('searchBtn');
         if (searchBtn) searchBtn.addEventListener('click', () => this.searchVideos());
@@ -88,6 +131,7 @@ class VideoSaver {
             });
         }
         
+        // Категории в сайдбаре
         document.querySelectorAll('.sidebar nav ul li').forEach(item => {
             item.addEventListener('click', () => {
                 this.setCategory(item.dataset.category);
@@ -97,6 +141,7 @@ class VideoSaver {
         const addCategoryBtn = document.getElementById('addCategoryBtn');
         if (addCategoryBtn) addCategoryBtn.addEventListener('click', () => this.addCategory());
         
+        // Закрытие по клику вне модального окна
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 this.closeAllModals();
@@ -109,13 +154,12 @@ class VideoSaver {
     getVideoType(url) {
         if (!url) return 'other';
         if (url.includes('tiktok.com')) return 'tiktok';
-        if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+        if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('youtube shorts')) return 'youtube';
         if (url.includes('vk.com/video')) return 'vk';
         return 'other';
     }
     
     extractVKVideoId(url) {
-        // Извлекает owner_id и video_id из ссылки VK
         const match = url.match(/video(-?\d+)_(\d+)/);
         if (match) {
             return {
@@ -126,48 +170,48 @@ class VideoSaver {
         return null;
     }
     
-    generateThumbnail(url, title = '') {
-        const type = this.getVideoType(url);
-        const encodedTitle = encodeURIComponent(title || 'Video');
-        
-        // Используем более надежные заглушки
-        const placeholders = {
-            youtube: 'https://img.youtube.com/vi/REPLACE_ID/mqdefault.jpg',
-            tiktok: 'https://via.placeholder.com/320x180/000000/FFFFFF?text=TikTok',
-            vk: 'https://via.placeholder.com/320x180/4A76A8/FFFFFF?text=VK+Video',
-            other: `https://via.placeholder.com/320x180/666666/FFFFFF?text=${encodedTitle}`
-        };
-        
-        if (type === 'youtube') {
-            const videoId = this.getYouTubeId(url);
-            if (videoId) {
-                return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-            }
-        }
-        
-        if (type === 'vk') {
-            // Для VK используем заглушку, так как получить превью сложно
-            return 'https://via.placeholder.com/320x180/4A76A8/FFFFFF?text=VK+Video';
-        }
-        
-        return placeholders[type] || placeholders.other;
-    }
-    
     getYouTubeId(url) {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
         const match = url.match(regExp);
         return (match && match[2] && match[2].length === 11) ? match[2] : null;
     }
     
-    async addVideo() {
-        const url = document.getElementById('videoUrl')?.value;
-        if (!url) return;
+    getYouTubeThumbnail(videoId) {
+        // Используем data:image заглушку вместо внешнего URL
+        return this.defaultThumbnails.youtube;
+    }
+    
+    generateThumbnail(url, title = '') {
+        const type = this.getVideoType(url);
         
-        let title = document.getElementById('videoTitle')?.value;
-        const category = document.getElementById('videoCategory')?.value || 'all';
-        let thumbnail = document.getElementById('videoThumbnail')?.value;
+        if (type === 'youtube') {
+            const videoId = this.getYouTubeId(url);
+            if (videoId) {
+                // Пробуем загрузить с YouTube, но с обработкой ошибок
+                return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+            }
+        }
         
-        // Генерируем миниатюру если не указана
+        return this.defaultThumbnails[type] || this.defaultThumbnails.other;
+    }
+    
+    addVideo() {
+        const urlInput = document.getElementById('videoUrl');
+        const titleInput = document.getElementById('videoTitle');
+        const categorySelect = document.getElementById('videoCategory');
+        const thumbnailInput = document.getElementById('videoThumbnail');
+        
+        if (!urlInput || !urlInput.value) {
+            alert('Введите ссылку на видео');
+            return;
+        }
+        
+        const url = urlInput.value;
+        const title = titleInput?.value || 'Без названия';
+        const category = categorySelect?.value || 'other';
+        let thumbnail = thumbnailInput?.value;
+        
+        // Если миниатюра не указана, генерируем
         if (!thumbnail) {
             thumbnail = this.generateThumbnail(url, title);
         }
@@ -175,7 +219,7 @@ class VideoSaver {
         const newVideo = {
             id: Date.now(),
             url: url,
-            title: title || 'Без названия',
+            title: title,
             category: category,
             thumbnail: thumbnail,
             views: 0,
@@ -203,7 +247,7 @@ class VideoSaver {
         
         if (urlInput) urlInput.value = video.url || '';
         if (titleInput) titleInput.value = video.title || '';
-        if (categorySelect) categorySelect.value = video.category || 'all';
+        if (categorySelect) categorySelect.value = video.category || 'other';
         if (thumbnailInput) thumbnailInput.value = video.thumbnail || '';
         
         const modalTitle = document.querySelector('#videoModal h2');
@@ -218,25 +262,21 @@ class VideoSaver {
     updateVideo() {
         if (!this.editingVideoId) return;
         
-        const url = document.getElementById('videoUrl')?.value;
-        const title = document.getElementById('videoTitle')?.value;
-        const category = document.getElementById('videoCategory')?.value;
-        let thumbnail = document.getElementById('videoThumbnail')?.value;
+        const urlInput = document.getElementById('videoUrl');
+        const titleInput = document.getElementById('videoTitle');
+        const categorySelect = document.getElementById('videoCategory');
+        const thumbnailInput = document.getElementById('videoThumbnail');
         
         const videoIndex = this.videos.findIndex(v => v.id === this.editingVideoId);
         if (videoIndex === -1) return;
         
-        if (!thumbnail) {
-            thumbnail = this.generateThumbnail(url, title);
-        }
-        
         this.videos[videoIndex] = {
             ...this.videos[videoIndex],
-            url: url || this.videos[videoIndex].url,
-            title: title || this.videos[videoIndex].title,
-            category: category || this.videos[videoIndex].category,
-            thumbnail: thumbnail,
-            type: this.getVideoType(url)
+            url: urlInput?.value || this.videos[videoIndex].url,
+            title: titleInput?.value || this.videos[videoIndex].title,
+            category: categorySelect?.value || this.videos[videoIndex].category,
+            thumbnail: thumbnailInput?.value || this.videos[videoIndex].thumbnail,
+            type: this.getVideoType(urlInput?.value)
         };
         
         this.saveData();
@@ -276,14 +316,7 @@ class VideoSaver {
             this.customCategories.push(newCategory);
             this.saveData();
             this.renderCategories();
-            
-            const select = document.getElementById('videoCategory');
-            if (select) {
-                const option = document.createElement('option');
-                option.value = `custom_${newCategory.id}`;
-                option.textContent = newCategory.name;
-                select.appendChild(option);
-            }
+            this.setupCategorySelect();
         }
     }
     
@@ -299,16 +332,8 @@ class VideoSaver {
             
             this.saveData();
             this.renderCategories();
+            this.setupCategorySelect();
             this.render();
-            
-            const select = document.getElementById('videoCategory');
-            if (select) {
-                Array.from(select.options).forEach((option, index) => {
-                    if (option.value === `custom_${categoryId}`) {
-                        select.remove(index);
-                    }
-                });
-            }
         }
     }
     
@@ -349,74 +374,76 @@ class VideoSaver {
         video.views = (video.views || 0) + 1;
         this.saveData();
         
+        const playerContainer = document.querySelector('.video-player-container');
+        const playerTitle = document.getElementById('playerVideoTitle');
+        const viewCount = document.getElementById('viewCount');
+        const videoDate = document.getElementById('videoDate');
+        
+        if (!playerContainer) return;
+        
+        // Очищаем контейнер
+        playerContainer.innerHTML = '';
+        
+        // Создаем соответствующий плеер
         if (video.type === 'vk') {
-            this.showVKPlayer(video);
+            const videoIds = this.extractVKVideoId(video.url);
+            if (videoIds) {
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://vk.com/video_ext.php?oid=${videoIds.ownerId}&id=${videoIds.videoId}&hd=1&autoplay=1`;
+                iframe.width = '100%';
+                iframe.height = '500';
+                iframe.frameBorder = '0';
+                iframe.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
+                iframe.allowFullscreen = true;
+                playerContainer.appendChild(iframe);
+            } else {
+                playerContainer.innerHTML = `<p style="color: white; padding: 20px;">Не удалось загрузить видео. <a href="${this.escapeHtml(video.url)}" target="_blank" style="color: #4A76A8;">Открыть в VK</a></p>`;
+            }
+        } else if (video.type === 'youtube') {
+            const videoId = this.getYouTubeId(video.url);
+            if (videoId) {
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+                iframe.width = '100%';
+                iframe.height = '500';
+                iframe.frameBorder = '0';
+                iframe.allow = 'autoplay; encrypted-media; fullscreen';
+                iframe.allowFullscreen = true;
+                playerContainer.appendChild(iframe);
+            } else {
+                playerContainer.innerHTML = `<p style="color: white; padding: 20px;">Не удалось загрузить видео. <a href="${this.escapeHtml(video.url)}" target="_blank" style="color: #FF0000;">Открыть на YouTube</a></p>`;
+            }
         } else {
-            this.showHTML5Player(video);
+            // Для других видео используем HTML5 плеер
+            const videoElement = document.createElement('video');
+            videoElement.id = 'videoPlayer';
+            videoElement.controls = true;
+            videoElement.autoplay = true;
+            videoElement.style.width = '100%';
+            videoElement.style.maxHeight = '70vh';
+            
+            const source = document.createElement('source');
+            source.src = video.url;
+            source.type = 'video/mp4';
+            
+            videoElement.appendChild(source);
+            videoElement.appendChild(document.createTextNode('Ваш браузер не поддерживает видео.'));
+            
+            playerContainer.appendChild(videoElement);
         }
         
-        document.getElementById('playerVideoTitle').textContent = video.title || 'Без названия';
-        document.getElementById('viewCount').textContent = video.views;
-        document.getElementById('videoDate').textContent = video.date || new Date().toLocaleDateString('ru-RU');
+        if (playerTitle) playerTitle.textContent = video.title || 'Без названия';
+        if (viewCount) viewCount.textContent = video.views;
+        if (videoDate) videoDate.textContent = video.date || new Date().toLocaleDateString('ru-RU');
         
         this.openModal('playerModal');
     }
     
-    showHTML5Player(video) {
-        const playerContainer = document.querySelector('.video-player-container');
-        if (!playerContainer) return;
-        
-        playerContainer.innerHTML = `
-            <video id="videoPlayer" controls autoplay>
-                <source src="${this.escapeHtml(video.url)}" type="video/mp4">
-                <source src="${this.escapeHtml(video.url)}" type="video/webm">
-                Ваш браузер не поддерживает видео.
-            </video>
-        `;
-    }
-    
-    showVKPlayer(video) {
-        const playerContainer = document.querySelector('.video-player-container');
-        if (!playerContainer) return;
-        
-        const videoIds = this.extractVKVideoId(video.url);
-        
-        if (videoIds) {
-            // Используем официальный VK плеер
-            playerContainer.innerHTML = `
-                <iframe src="https://vk.com/video_ext.php?oid=${videoIds.ownerId}&id=${videoIds.videoId}&hd=1&autoplay=1" 
-                        width="100%" 
-                        height="500" 
-                        frameborder="0"
-                        allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
-                        allowfullscreen>
-                </iframe>
-            `;
-        } else {
-            // Если не удалось распарсить, показываем ссылку
-            playerContainer.innerHTML = `
-                <div style="text-align: center; padding: 50px; background: #f0f0f0;">
-                    <p>Не удалось загрузить VK видео</p>
-                    <a href="${this.escapeHtml(video.url)}" target="_blank" style="color: #4A76A8;">
-                        Открыть в VK
-                    </a>
-                </div>
-            `;
-        }
-    }
-    
     pauseVideo() {
         const playerContainer = document.querySelector('.video-player-container');
-        if (!playerContainer) return;
-        
-        // Останавливаем видео если это HTML5 плеер
-        const videoPlayer = document.getElementById('videoPlayer');
-        if (videoPlayer) {
-            videoPlayer.pause();
+        if (playerContainer) {
+            playerContainer.innerHTML = '';
         }
-        
-        // Очищаем контейнер и возвращаем обычный плеер
-        playerContainer.innerHTML = '<video id="videoPlayer" controls><source src="" type="video/mp4">Ваш браузер не поддерживает видео.</video>';
     }
     
     openModal(modalId) {
@@ -472,7 +499,8 @@ class VideoSaver {
         
         const videosToRender = filteredVideos || this.videos.filter(video => {
             if (this.currentCategory === 'all') return true;
-            return video.category === this.currentCategory;
+            if (this.currentCategory === video.category) return true;
+            return false;
         });
         
         if (videosToRender.length === 0) {
@@ -492,7 +520,7 @@ class VideoSaver {
                     <img src="${this.escapeHtml(video.thumbnail)}" 
                          alt="${this.escapeHtml(video.title)}"
                          loading="lazy"
-                         onerror="this.onerror=null; this.src='https://via.placeholder.com/320x180?text=Video'">
+                         onerror="this.onerror=null; this.src='${this.defaultThumbnails[video.type] || this.defaultThumbnails.other}'">
                     <span class="duration">${video.duration || '00:00'}</span>
                     <div class="video-type-badge ${video.type || 'other'}">
                         ${video.type === 'vk' ? 'VK' : video.type === 'youtube' ? 'YT' : video.type === 'tiktok' ? 'TT' : ''}
@@ -516,6 +544,7 @@ class VideoSaver {
             </div>
         `).join('');
         
+        // Добавляем обработчики для карточек
         grid.querySelectorAll('.video-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 if (e.target.closest('.edit-video-btn') || e.target.closest('.delete-video-btn')) {
