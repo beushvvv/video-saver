@@ -6,7 +6,6 @@ class VideoSaver {
         this.currentVideo = null;
         this.editingVideoId = null;
         
-        // Используем более надежный ключ для localStorage
         this.storageKey = 'videoSaverData';
         this.categoriesKey = 'videoSaverCategories';
         
@@ -14,7 +13,6 @@ class VideoSaver {
     }
     
     init() {
-        // Проверяем, что DOM полностью загружен
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.setup());
         } else {
@@ -26,30 +24,16 @@ class VideoSaver {
         this.loadData();
         this.bindEvents();
         this.render();
-        this.setupImageFallback();
-    }
-    
-    setupImageFallback() {
-        // Глобальный обработчик для ошибок загрузки изображений
-        window.addEventListener('error', (e) => {
-            if (e.target.tagName === 'IMG') {
-                e.target.src = 'https://via.placeholder.com/320x180?text=Video';
-                e.target.onerror = null; // Предотвращаем бесконечный цикл
-            }
-        }, true);
     }
     
     loadData() {
         try {
-            // Загружаем видео из localStorage с проверкой
             const savedVideos = localStorage.getItem(this.storageKey);
             this.videos = savedVideos ? JSON.parse(savedVideos) : [];
             
-            // Загружаем категории
             const savedCategories = localStorage.getItem(this.categoriesKey);
             this.customCategories = savedCategories ? JSON.parse(savedCategories) : [];
             
-            // Валидация данных
             if (!Array.isArray(this.videos)) this.videos = [];
             if (!Array.isArray(this.customCategories)) this.customCategories = [];
         } catch (e) {
@@ -65,12 +49,10 @@ class VideoSaver {
             localStorage.setItem(this.categoriesKey, JSON.stringify(this.customCategories));
         } catch (e) {
             console.error('Ошибка сохранения данных:', e);
-            alert('Не удалось сохранить данные. Возможно, превышен лимит localStorage.');
         }
     }
     
     bindEvents() {
-        // Проверяем существование элементов перед добавлением событий
         const addBtn = document.getElementById('addVideoBtn');
         if (addBtn) addBtn.addEventListener('click', () => this.openModal('videoModal'));
         
@@ -106,7 +88,6 @@ class VideoSaver {
             });
         }
         
-        // Категории
         document.querySelectorAll('.sidebar nav ul li').forEach(item => {
             item.addEventListener('click', () => {
                 this.setCategory(item.dataset.category);
@@ -116,7 +97,6 @@ class VideoSaver {
         const addCategoryBtn = document.getElementById('addCategoryBtn');
         if (addCategoryBtn) addCategoryBtn.addEventListener('click', () => this.addCategory());
         
-        // Закрытие по клику вне модального окна
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
                 this.closeAllModals();
@@ -129,55 +109,54 @@ class VideoSaver {
     getVideoType(url) {
         if (!url) return 'other';
         if (url.includes('tiktok.com')) return 'tiktok';
-        if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('youtube shorts')) return 'youtube';
+        if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
         if (url.includes('vk.com/video')) return 'vk';
         return 'other';
     }
     
-    getYouTubeId(url) {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[2] && match[2].length === 11) ? match[2] : null;
-    }
-    
-    async getVKVideoInfo(vkUrl) {
-        // Для GitHub Pages используем JSONP или прокси
-        // Этот метод может не работать из-за CORS, поэтому делаем fallback
-        return new Promise((resolve) => {
-            // Пробуем получить через oembed, но с обработкой ошибок
-            fetch(`https://vk.com/oembed?url=${encodeURIComponent(vkUrl)}&format=json`)
-                .then(response => response.json())
-                .then(data => resolve({
-                    title: data.title || 'VK Video',
-                    thumbnail: data.thumbnail_url || null
-                }))
-                .catch(() => resolve({
-                    title: 'VK Video',
-                    thumbnail: null
-                }));
-        });
+    extractVKVideoId(url) {
+        // Извлекает owner_id и video_id из ссылки VK
+        const match = url.match(/video(-?\d+)_(\d+)/);
+        if (match) {
+            return {
+                ownerId: match[1],
+                videoId: match[2]
+            };
+        }
+        return null;
     }
     
     generateThumbnail(url, title = '') {
         const type = this.getVideoType(url);
         const encodedTitle = encodeURIComponent(title || 'Video');
         
-        // Используем надежные заглушки с via.placeholder.com
+        // Используем более надежные заглушки
         const placeholders = {
-            youtube: `https://via.placeholder.com/320x180/FF0000/FFFFFF?text=YouTube`,
-            tiktok: `https://via.placeholder.com/320x180/000000/FFFFFF?text=TikTok`,
-            vk: `https://via.placeholder.com/320x180/4A76A8/FFFFFF?text=VK`,
+            youtube: 'https://img.youtube.com/vi/REPLACE_ID/mqdefault.jpg',
+            tiktok: 'https://via.placeholder.com/320x180/000000/FFFFFF?text=TikTok',
+            vk: 'https://via.placeholder.com/320x180/4A76A8/FFFFFF?text=VK+Video',
             other: `https://via.placeholder.com/320x180/666666/FFFFFF?text=${encodedTitle}`
         };
         
         if (type === 'youtube') {
             const videoId = this.getYouTubeId(url);
             if (videoId) {
-                return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`; // Используем mqdefault вместо maxresdefault для надежности
+                return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
             }
         }
         
+        if (type === 'vk') {
+            // Для VK используем заглушку, так как получить превью сложно
+            return 'https://via.placeholder.com/320x180/4A76A8/FFFFFF?text=VK+Video';
+        }
+        
         return placeholders[type] || placeholders.other;
+    }
+    
+    getYouTubeId(url) {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2] && match[2].length === 11) ? match[2] : null;
     }
     
     async addVideo() {
@@ -187,15 +166,6 @@ class VideoSaver {
         let title = document.getElementById('videoTitle')?.value;
         const category = document.getElementById('videoCategory')?.value || 'all';
         let thumbnail = document.getElementById('videoThumbnail')?.value;
-        
-        // Если это VK видео, пробуем получить информацию
-        if (url.includes('vk.com/video')) {
-            const vkInfo = await this.getVKVideoInfo(url);
-            if (vkInfo) {
-                title = title || vkInfo.title || 'VK Video';
-                thumbnail = thumbnail || vkInfo.thumbnail;
-            }
-        }
         
         // Генерируем миниатюру если не указана
         if (!thumbnail) {
@@ -210,7 +180,7 @@ class VideoSaver {
             thumbnail: thumbnail,
             views: 0,
             date: new Date().toLocaleDateString('ru-RU'),
-            duration: '00:00'
+            type: this.getVideoType(url)
         };
         
         this.videos.unshift(newVideo);
@@ -245,7 +215,7 @@ class VideoSaver {
         this.openModal('videoModal');
     }
     
-    async updateVideo() {
+    updateVideo() {
         if (!this.editingVideoId) return;
         
         const url = document.getElementById('videoUrl')?.value;
@@ -256,13 +226,17 @@ class VideoSaver {
         const videoIndex = this.videos.findIndex(v => v.id === this.editingVideoId);
         if (videoIndex === -1) return;
         
-        // Обновляем видео
+        if (!thumbnail) {
+            thumbnail = this.generateThumbnail(url, title);
+        }
+        
         this.videos[videoIndex] = {
             ...this.videos[videoIndex],
             url: url || this.videos[videoIndex].url,
             title: title || this.videos[videoIndex].title,
             category: category || this.videos[videoIndex].category,
-            thumbnail: thumbnail || this.videos[videoIndex].thumbnail,
+            thumbnail: thumbnail,
+            type: this.getVideoType(url)
         };
         
         this.saveData();
@@ -303,7 +277,6 @@ class VideoSaver {
             this.saveData();
             this.renderCategories();
             
-            // Добавляем в выпадающий список
             const select = document.getElementById('videoCategory');
             if (select) {
                 const option = document.createElement('option');
@@ -318,7 +291,6 @@ class VideoSaver {
         if (confirm('Удалить категорию? Видео в этой категории будут перемещены в "Все видео"')) {
             this.customCategories = this.customCategories.filter(c => c.id !== categoryId);
             
-            // Обновляем категории видео
             this.videos.forEach(video => {
                 if (video.category === `custom_${categoryId}`) {
                     video.category = 'all';
@@ -329,7 +301,6 @@ class VideoSaver {
             this.renderCategories();
             this.render();
             
-            // Удаляем из выпадающего списка
             const select = document.getElementById('videoCategory');
             if (select) {
                 Array.from(select.options).forEach((option, index) => {
@@ -378,47 +349,10 @@ class VideoSaver {
         video.views = (video.views || 0) + 1;
         this.saveData();
         
-        const player = document.getElementById('videoPlayer');
-        const playerTitle = document.getElementById('playerVideoTitle');
-        const viewCount = document.getElementById('viewCount');
-        const videoDate = document.getElementById('videoDate');
-        
-        if (player) {
-            // Для VK видео используем iframe, для остальных - обычный плеер
-            if (video.url.includes('vk.com')) {
-                this.showVKPlayer(video);
-            } else {
-                player.src = video.url;
-                if (playerTitle) playerTitle.textContent = video.title || 'Без названия';
-                if (viewCount) viewCount.textContent = video.views;
-                if (videoDate) videoDate.textContent = video.date || new Date().toLocaleDateString('ru-RU');
-                
-                this.openModal('playerModal');
-                player.play().catch(e => console.log('Автовоспроизведение не удалось:', e));
-            }
-        }
-    }
-    
-    showVKPlayer(video) {
-        const playerContainer = document.querySelector('.video-player-container');
-        if (!playerContainer) return;
-        
-        // Извлекаем ID видео из ссылки VK
-        const matches = video.url.match(/video(-?\d+)_(\d+)/);
-        if (matches) {
-            const ownerId = matches[1];
-            const videoId = matches[2];
-            
-            playerContainer.innerHTML = `
-                <iframe src="https://vk.com/video_ext.php?oid=${ownerId}&id=${videoId}&hd=1" 
-                        width="100%" 
-                        height="500" 
-                        frameborder="0"
-                        allowfullscreen>
-                </iframe>
-            `;
+        if (video.type === 'vk') {
+            this.showVKPlayer(video);
         } else {
-            playerContainer.innerHTML = `<video controls src="${video.url}"></video>`;
+            this.showHTML5Player(video);
         }
         
         document.getElementById('playerVideoTitle').textContent = video.title || 'Без названия';
@@ -428,18 +362,61 @@ class VideoSaver {
         this.openModal('playerModal');
     }
     
+    showHTML5Player(video) {
+        const playerContainer = document.querySelector('.video-player-container');
+        if (!playerContainer) return;
+        
+        playerContainer.innerHTML = `
+            <video id="videoPlayer" controls autoplay>
+                <source src="${this.escapeHtml(video.url)}" type="video/mp4">
+                <source src="${this.escapeHtml(video.url)}" type="video/webm">
+                Ваш браузер не поддерживает видео.
+            </video>
+        `;
+    }
+    
+    showVKPlayer(video) {
+        const playerContainer = document.querySelector('.video-player-container');
+        if (!playerContainer) return;
+        
+        const videoIds = this.extractVKVideoId(video.url);
+        
+        if (videoIds) {
+            // Используем официальный VK плеер
+            playerContainer.innerHTML = `
+                <iframe src="https://vk.com/video_ext.php?oid=${videoIds.ownerId}&id=${videoIds.videoId}&hd=1&autoplay=1" 
+                        width="100%" 
+                        height="500" 
+                        frameborder="0"
+                        allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+            `;
+        } else {
+            // Если не удалось распарсить, показываем ссылку
+            playerContainer.innerHTML = `
+                <div style="text-align: center; padding: 50px; background: #f0f0f0;">
+                    <p>Не удалось загрузить VK видео</p>
+                    <a href="${this.escapeHtml(video.url)}" target="_blank" style="color: #4A76A8;">
+                        Открыть в VK
+                    </a>
+                </div>
+            `;
+        }
+    }
+    
     pauseVideo() {
-        const player = document.getElementById('videoPlayer');
-        if (player) {
-            player.pause();
-            player.src = '';
+        const playerContainer = document.querySelector('.video-player-container');
+        if (!playerContainer) return;
+        
+        // Останавливаем видео если это HTML5 плеер
+        const videoPlayer = document.getElementById('videoPlayer');
+        if (videoPlayer) {
+            videoPlayer.pause();
         }
         
-        // Очищаем iframe VK
-        const playerContainer = document.querySelector('.video-player-container');
-        if (playerContainer) {
-            playerContainer.innerHTML = '<video id="videoPlayer" controls><source src="" type="video/mp4">Ваш браузер не поддерживает видео.</video>';
-        }
+        // Очищаем контейнер и возвращаем обычный плеер
+        playerContainer.innerHTML = '<video id="videoPlayer" controls><source src="" type="video/mp4">Ваш браузер не поддерживает видео.</video>';
     }
     
     openModal(modalId) {
@@ -483,6 +460,7 @@ class VideoSaver {
     }
     
     escapeHtml(text) {
+        if (!text) return '';
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
@@ -511,11 +489,14 @@ class VideoSaver {
         grid.innerHTML = videosToRender.map(video => `
             <div class="video-card" data-id="${video.id}">
                 <div class="thumbnail">
-                    <img src="${this.escapeHtml(video.thumbnail || this.generateThumbnail(video.url, video.title))}" 
+                    <img src="${this.escapeHtml(video.thumbnail)}" 
                          alt="${this.escapeHtml(video.title)}"
                          loading="lazy"
                          onerror="this.onerror=null; this.src='https://via.placeholder.com/320x180?text=Video'">
                     <span class="duration">${video.duration || '00:00'}</span>
+                    <div class="video-type-badge ${video.type || 'other'}">
+                        ${video.type === 'vk' ? 'VK' : video.type === 'youtube' ? 'YT' : video.type === 'tiktok' ? 'TT' : ''}
+                    </div>
                     <div class="video-actions">
                         <button class="edit-video-btn" onclick="event.stopPropagation(); videoSaver.editVideo(${video.id})">
                             <i class="fas fa-edit"></i>
@@ -535,7 +516,6 @@ class VideoSaver {
             </div>
         `).join('');
         
-        // Добавляем обработчики для карточек
         grid.querySelectorAll('.video-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 if (e.target.closest('.edit-video-btn') || e.target.closest('.delete-video-btn')) {
@@ -562,7 +542,7 @@ class VideoSaver {
     }
 }
 
-// Создаем глобальный экземпляр после загрузки страницы
+// Создаем глобальный экземпляр
 let videoSaver;
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
