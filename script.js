@@ -17,6 +17,13 @@ class VideoSaver {
         // Флаг для отслеживания выбранного файла
         this.selectedFile = null;
         
+        // Альтернативные API для TikTok (резервные варианты)
+        this.tikTokAPIs = [
+            'https://www.tiktok.com/oembed?url=',  // Официальный
+            'https://api.tikwm.com/video/info?url=', // Сторонний 1
+            'https://api.ssstik.io/oembed?url='     // Сторонний 2
+        ];
+        
         // Заглушки для изображений
         this.defaultThumbnails = {
             youtube: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%23FF0000\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3EYoutube%3C/text%3E%3C/svg%3E',
@@ -258,34 +265,89 @@ class VideoSaver {
     }
     
     /**
-     * Получение данных TikTok через oEmbed API
+     * Получение данных TikTok с использованием нескольких API
      */
     async getTikTokData(url) {
-        try {
-            console.log('🎬 Получение данных TikTok для:', url);
-            
-            const response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
-            
-            if (!response.ok) {
-                throw new Error('TikTok API вернул ошибку');
+        console.log('🎬 Получение данных TikTok для:', url);
+        
+        // Пробуем разные API по очереди
+        const apis = [
+            {
+                url: `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`,
+                parser: (data) => ({
+                    success: true,
+                    embedCode: data.html,
+                    thumbnail: data.thumbnail_url,
+                    title: data.title,
+                    author: data.author_name
+                })
+            },
+            {
+                url: `https://api.tikwm.com/video/info?url=${encodeURIComponent(url)}`,
+                parser: (data) => ({
+                    success: true,
+                    embedCode: data.data?.embed_code || null,
+                    thumbnail: data.data?.origin_cover || data.data?.cover,
+                    title: data.data?.title,
+                    author: data.data?.author?.unique_id
+                })
+            },
+            {
+                url: `https://api.ssstik.io/oembed?url=${encodeURIComponent(url)}`,
+                parser: (data) => ({
+                    success: true,
+                    embedCode: data.html,
+                    thumbnail: data.thumbnail_url,
+                    title: data.title,
+                    author: data.author_name
+                })
             }
-            
-            const data = await response.json();
-            
-            return {
-                success: true,
-                embedCode: data.html,
-                thumbnail: data.thumbnail_url,
-                title: data.title,
-                author: data.author_name
-            };
-        } catch (error) {
-            console.error('❌ Ошибка получения данных TikTok:', error);
-            return {
-                success: false,
-                error: error.message
-            };
+        ];
+        
+        // Пробуем каждый API по очереди
+        for (const api of apis) {
+            try {
+                console.log('🔄 Пробуем API:', api.url);
+                
+                // Добавляем прокси для обхода CORS и блокировок
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(api.url)}`;
+                
+                const response = await fetch(proxyUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Origin': window.location.origin
+                    },
+                    mode: 'cors',
+                    cache: 'no-cache'
+                });
+                
+                if (response.ok) {
+                    const text = await response.text();
+                    try {
+                        const data = JSON.parse(text);
+                        console.log('✅ Данные получены:', data);
+                        return api.parser(data);
+                    } catch (e) {
+                        console.warn('❌ Не удалось распарсить JSON');
+                    }
+                }
+            } catch (error) {
+                console.warn(`⚠️ API ${api.url} не работает:`, error.message);
+                // Продолжаем со следующим API
+            }
         }
+        
+        // Если ни один API не сработал, возвращаем базовые данные
+        console.log('⚠️ Все API недоступны, используем базовые данные');
+        return {
+            success: true, // Возвращаем успех, чтобы видео сохранилось
+            embedCode: null,
+            thumbnail: this.defaultThumbnails.tiktok,
+            title: 'TikTok Video',
+            author: null,
+            fallback: true // Флаг, что использованы данные по умолчанию
+        };
     }
     
     generateThumbnail(url, title = '') {
@@ -369,18 +431,16 @@ class VideoSaver {
     }
     
     /**
-     * Добавление TikTok видео с использованием oEmbed
+     * Добавление TikTok видео с обработкой ошибок
      */
     async addTikTokVideo(url, formData) {
-        alert('⏳ Загрузка данных TikTok...');
+        const loadingToast = this.showToast('⏳ Загрузка данных TikTok...', 5000);
         
         const tiktokData = await this.getTikTokData(url);
         
-        if (!tiktokData.success) {
-            alert('❌ Не удалось загрузить видео TikTok');
-            return null;
-        }
+        if (loadingToast) loadingToast.remove();
         
+        // Всегда создаём видео, даже если API не сработал
         const newVideo = {
             id: Date.now(),
             url: url,
@@ -391,8 +451,15 @@ class VideoSaver {
             date: new Date().toLocaleDateString('ru-RU'),
             type: 'tiktok',
             embedCode: tiktokData.embedCode,
-            author: tiktokData.author
+            author: tiktokData.author,
+            fallback: tiktokData.fallback || false
         };
+        
+        if (tiktokData.fallback) {
+            this.showToast('⚠️ Видео сохранено, но данные TikTok недоступны', 3000);
+        } else {
+            this.showToast('✅ Данные TikTok загружены', 2000);
+        }
         
         return newVideo;
     }
@@ -668,24 +735,39 @@ class VideoSaver {
         
         playerContainer.innerHTML = '';
         
-        if (video.type === 'tiktok' && video.embedCode) {
-            console.log('🎬 Используем TikTok embed');
-            
-            const embedContainer = document.createElement('div');
-            embedContainer.className = 'tiktok-embed-container';
-            embedContainer.innerHTML = video.embedCode;
-            
-            if (!document.querySelector('script[src="https://www.tiktok.com/embed.js"]')) {
-                const script = document.createElement('script');
-                script.src = 'https://www.tiktok.com/embed.js';
-                script.async = true;
-                document.body.appendChild(script);
-            }
-            
-            playerContainer.appendChild(embedContainer);
-            
-            if (window.tiktok && window.tiktok.refresh) {
-                window.tiktok.refresh();
+        if (video.type === 'tiktok') {
+            if (video.embedCode) {
+                console.log('🎬 Используем TikTok embed');
+                
+                const embedContainer = document.createElement('div');
+                embedContainer.className = 'tiktok-embed-container';
+                embedContainer.innerHTML = video.embedCode;
+                
+                playerContainer.appendChild(embedContainer);
+                
+                // Пытаемся загрузить скрипт TikTok, если его нет
+                if (!document.querySelector('script[src="https://www.tiktok.com/embed.js"]')) {
+                    const script = document.createElement('script');
+                    script.src = 'https://www.tiktok.com/embed.js';
+                    script.async = true;
+                    document.body.appendChild(script);
+                }
+            } else {
+                // Если нет embed кода, показываем кнопку перехода
+                playerContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #25F4EE, #FE2C55); border-radius: 10px;">
+                        <i class="fab fa-tiktok" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
+                        <p style="color: white; font-size: 18px; margin-bottom: 25px;">
+                            Открыть видео в TikTok
+                        </p>
+                        <a href="${this.escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer"
+                           style="display: inline-block; padding: 15px 40px; background: white; 
+                                  text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;
+                                  color: #000;">
+                            <i class="fab fa-tiktok"></i> Открыть TikTok
+                        </a>
+                    </div>
+                `;
             }
         } else if (video.type === 'local') {
             if (this.db) {
@@ -729,24 +811,46 @@ class VideoSaver {
                 iframe.allowFullscreen = true;
                 playerContainer.appendChild(iframe);
             }
+        } else if (video.type === 'vk') {
+            const vkMatch = video.url.match(/video(-?\d+)_(\d+)/);
+            if (vkMatch) {
+                const ownerId = vkMatch[1];
+                const videoId = vkMatch[2];
+                
+                playerContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #4A76A8, #2A4F7C); border-radius: 10px;">
+                        <i class="fab fa-vk" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
+                        <p style="color: white; font-size: 18px; margin-bottom: 25px;">
+                            Открыть видео в VK
+                        </p>
+                        <a href="https://vk.com/video${ownerId}_${videoId}" target="_blank"
+                           style="display: inline-block; padding: 15px 40px; background: white; 
+                                  text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;
+                                  color: #4A76A8;">
+                            <i class="fab fa-vk"></i> Открыть VK
+                        </a>
+                    </div>
+                `;
+            } else {
+                playerContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px; background: #f0f0f0; border-radius: 10px;">
+                        <p>Некорректная ссылка VK</p>
+                        <a href="${this.escapeHtml(video.url)}" target="_blank">Открыть ссылку</a>
+                    </div>
+                `;
+            }
         } else {
-            const colors = {
-                vk: { bg: 'linear-gradient(135deg, #4A76A8, #2A4F7C)', name: 'VK' },
-                other: { bg: 'linear-gradient(135deg, #666666, #333333)', name: 'ссылку' }
-            };
-            
-            const style = colors[video.type] || colors.other;
-            
             playerContainer.innerHTML = `
-                <div style="text-align: center; padding: 40px; background: ${style.bg}; border-radius: 10px;">
+                <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #666666, #333333); border-radius: 10px;">
                     <i class="fas fa-external-link-alt" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
                     <p style="color: white; font-size: 18px; margin-bottom: 25px;">
-                        Видео откроется в новой вкладке
+                        Открыть видео
                     </p>
-                    <a href="${this.escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer"
+                    <a href="${this.escapeHtml(video.url)}" target="_blank"
                        style="display: inline-block; padding: 15px 40px; background: white; 
-                              text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;">
-                        <i class="fas fa-external-link-alt"></i> Открыть ${style.name}
+                              text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;
+                              color: #333;">
+                        <i class="fas fa-external-link-alt"></i> Открыть ссылку
                     </a>
                 </div>
             `;
@@ -813,6 +917,33 @@ class VideoSaver {
         return div.innerHTML;
     }
     
+    showToast(message, duration = 2000) {
+        const toast = document.createElement('div');
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0,0,0,0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            z-index: 2000;
+            animation: fadeInOut ${duration}ms ease;
+            pointer-events: none;
+        `;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, duration);
+        
+        return toast;
+    }
+    
     render(filteredVideos = null) {
         const grid = document.getElementById('videosGrid');
         if (!grid) return;
@@ -836,6 +967,7 @@ class VideoSaver {
         
         grid.innerHTML = videosToRender.map(video => {
             const authorHtml = video.author ? `<span>👤 ${video.author}</span>` : '';
+            const fallbackIcon = video.fallback ? ' ⚠️' : '';
             
             return `
             <div class="video-card" data-id="${video.id}">
@@ -850,6 +982,7 @@ class VideoSaver {
                           video.type === 'youtube' ? 'YT' : 
                           video.type === 'tiktok' ? '🎵' : 
                           video.type === 'local' ? '💾' : ''}
+                        ${fallbackIcon}
                     </div>
                     <div class="video-actions">
                         <button class="edit-video-btn" onclick="event.stopPropagation(); videoSaver.editVideo(${video.id})">
@@ -870,6 +1003,7 @@ class VideoSaver {
                         <i class="fas fa-hdd"></i> ${video.size}
                     </div>` : ''}
                     ${authorHtml ? `<div style="font-size: 11px; color: #999; margin-top: 2px;">${authorHtml}</div>` : ''}
+                    ${video.fallback ? `<div style="font-size: 10px; color: #ff9900; margin-top: 2px;">⚠️ Данные недоступны</div>` : ''}
                 </div>
             </div>
         `}).join('');

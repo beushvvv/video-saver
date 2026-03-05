@@ -889,6 +889,35 @@ header {
     font-size: 12px;
 }
 
+/* Стили для уведомлений */
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+    15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+}
+
+/* Стили для TikTok плеера */
+.tiktok-embed-container {
+    width: 100%;
+    min-height: 600px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000;
+}
+
+.tiktok-embed-container iframe {
+    max-width: 100%;
+    max-height: 70vh;
+}
+
+/* Бейдж с предупреждением */
+.video-type-badge.tiktok {
+    background: linear-gradient(135deg, #25F4EE, #FE2C55);
+    color: white;
+}
+
 /* Разделитель в форме */
 .form-divider {
     text-align: center;
