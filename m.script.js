@@ -192,40 +192,58 @@ class MobileVideoSaver {
             });
         }
         
-        // Загрузка файла - ОБНОВЛЕННАЯ ЛОГИКА
-        const uploadArea = document.getElementById('fileUploadArea');
+        // Загрузка файла - ИСПРАВЛЕННАЯ ВЕРСИЯ
         const fileInput = document.getElementById('videoFile');
-        
-        if (uploadArea && fileInput) {
-            // Убираем старый обработчик и вешаем новый
-            uploadArea.onclick = (e) => {
-                e.preventDefault();
-                fileInput.click();
-            };
+        const uploadArea = document.getElementById('fileUploadArea');
+
+        if (fileInput && uploadArea) {
+            console.log('📁 Инициализация загрузки файлов');
             
-            fileInput.onchange = (e) => {
+            // Делаем всю область кликабельной через label
+            const fileUploadContainer = uploadArea.parentElement;
+            if (fileUploadContainer) {
+                fileUploadContainer.style.position = 'relative';
+                fileUploadContainer.style.cursor = 'pointer';
+            }
+            
+            // Обработка клика по области
+            uploadArea.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('👆 Клик по области загрузки');
+                fileInput.click();
+            });
+            
+            // Обработка выбора файла
+            fileInput.addEventListener('change', (e) => {
+                e.preventDefault();
                 const files = e.target.files;
+                console.log('📁 Выбран файл:', files ? files[0]?.name : 'нет');
+                
                 if (files && files.length > 0) {
-                    this.selectedFile = files[0]; // Сохраняем файл в свойство класса
+                    this.selectedFile = files[0];
                     
                     // Обновляем отображение
                     uploadArea.innerHTML = `
                         <i class="fas fa-check-circle" style="color: #4CAF50; font-size: 40px;"></i>
-                        <p style="font-weight: bold; margin: 5px 0;">${this.selectedFile.name}</p>
+                        <p style="font-weight: bold; margin: 5px 0; word-break: break-word;">${this.selectedFile.name}</p>
                         <small>${(this.selectedFile.size / 1024 / 1024).toFixed(2)} МБ</small>
                     `;
                     
-                    // Автоматически заполняем название из имени файла (если поле пустое)
+                    // Автоматически заполняем название
                     const titleInput = document.getElementById('videoTitle');
                     if (titleInput && !titleInput.value) {
-                        // Убираем расширение файла
                         const fileName = this.selectedFile.name.replace(/\.[^/.]+$/, "");
                         titleInput.value = fileName;
                     }
-                    
-                    console.log('📁 Выбран файл:', this.selectedFile.name);
                 }
-            };
+            });
+            
+            // Для мобильных устройств добавляем touch событие
+            uploadArea.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                console.log('👆 Touch на области загрузки');
+            }, { passive: false });
         }
         
         // Добавление категории
