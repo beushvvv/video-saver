@@ -2,17 +2,22 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Video Saver - Мобильная версия</title>
-    <link rel="stylesheet" href="m.styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Правильные мета-теги -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#ff0000">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <title>Video Saver - Мобильная версия</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Подключаем отдельный файл стилей -->
+    <link rel="stylesheet" href="m.styles.css">
 </head>
 <body>
     <div class="mobile-container">
-        <!-- Нижняя навигационная панель (мобильная) -->
+        <!-- Нижняя навигация -->
         <div class="bottom-nav">
             <div class="nav-item active" data-category="all">
                 <i class="fas fa-home"></i>
@@ -39,7 +44,7 @@
         <!-- Шапка -->
         <header class="mobile-header">
             <div class="header-left">
-                <i class="fas fa-video logo-icon"></i>
+                <i class="fas fa-video"></i>
                 <h1>Video Saver</h1>
             </div>
             <div class="header-right">
@@ -55,21 +60,20 @@
             </div>
         </header>
 
-        <!-- Поисковая строка (скрыта по умолчанию) -->
+        <!-- Поисковая строка -->
         <div class="mobile-search-bar" id="mobileSearchBar">
             <input type="text" id="mobileSearchInput" placeholder="Поиск видео...">
-            <button id="mobileSearchSubmit"><i class="fas fa-search"></i></button>
-            <button class="close-search" id="closeSearch"><i class="fas fa-times"></i></button>
+            <button class="close-search" id="closeSearchBtn"><i class="fas fa-times"></i></button>
         </div>
 
-        <!-- Категории (горизонтальный скролл) -->
+        <!-- Горизонтальный скролл категорий -->
         <div class="categories-scroll" id="categoriesScroll">
             <div class="category-chip active" data-category="all">Все</div>
             <div class="category-chip" data-category="tiktok">TikTok</div>
             <div class="category-chip" data-category="youtube">YouTube</div>
             <div class="category-chip" data-category="vk">VK</div>
             <div class="category-chip" data-category="edits">Edit'ы</div>
-            <div class="category-chip" data-category="local">Мои видео</div>
+            <div class="category-chip" data-category="local">Мои</div>
             <div class="category-chip more-categories" id="moreCategoriesBtn">
                 <i class="fas fa-chevron-down"></i> Ещё
             </div>
@@ -77,75 +81,81 @@
 
         <!-- Сетка видео -->
         <main class="mobile-videos-grid" id="mobileVideosGrid">
-            <!-- Видео будут загружаться сюда -->
+            <div class="empty-state">
+                <i class="fas fa-video"></i>
+                <h3>Здесь пока нет видео</h3>
+                <p>Нажмите + чтобы добавить</p>
+            </div>
         </main>
 
-        <!-- Модальное окно для добавления видео -->
-        <div id="mobileVideoModal" class="mobile-modal">
-            <div class="mobile-modal-content">
-                <div class="mobile-modal-header">
-                    <h2>Добавить видео</h2>
-                    <button class="mobile-modal-close">&times;</button>
+        <!-- Модальное окно добавления видео -->
+        <div class="mobile-modal" id="videoModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Добавить видео</h2>
+                    <button class="modal-close" id="closeModalBtn">&times;</button>
                 </div>
-                <form id="mobileVideoForm">
-                    <div class="mobile-form-group">
-                        <label>Ссылка на видео</label>
-                        <input type="url" id="mobileVideoUrl" placeholder="https://...">
-                        <small>YouTube, VK, TikTok</small>
-                    </div>
-                    
-                    <div class="mobile-form-divider">или</div>
-                    
-                    <div class="mobile-form-group">
-                        <label>Загрузить с телефона</label>
-                        <div class="file-upload-area" id="fileUploadArea">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <p>Нажмите для выбора файла</p>
-                            <small>MP4, 3GP, MOV до 50 МБ</small>
-                            <input type="file" id="mobileVideoFile" accept="video/*" capture style="display: none;">
+                <div class="modal-body">
+                    <form id="videoForm">
+                        <div class="form-group">
+                            <label>Ссылка на видео</label>
+                            <input type="url" id="videoUrl" placeholder="https://...">
+                            <small>YouTube, VK, TikTok</small>
                         </div>
-                    </div>
+                        
+                        <div class="form-divider">или</div>
+                        
+                        <div class="form-group">
+                            <label>Загрузить с телефона</label>
+                            <div class="file-upload-area" id="fileUploadArea">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Нажмите для выбора файла</p>
+                                <small>MP4, 3GP, MOV до 50 МБ</small>
+                                <input type="file" id="videoFile" accept="video/*" style="display: none;">
+                            </div>
+                        </div>
 
-                    <div class="mobile-form-group">
-                        <label>Название</label>
-                        <input type="text" id="mobileVideoTitle" required placeholder="Введите название">
-                    </div>
-                    
-                    <div class="mobile-form-group">
-                        <label>Категория</label>
-                        <select id="mobileVideoCategory" required>
-                            <option value="tiktok">TikTok</option>
-                            <option value="youtube">YouTube Shorts</option>
-                            <option value="vk">VK Видео</option>
-                            <option value="edits">Edit'ы</option>
-                            <option value="local">Мои видео</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mobile-form-group">
-                        <label>Миниатюра (URL)</label>
-                        <input type="url" id="mobileVideoThumbnail" placeholder="https://... (необязательно)">
-                    </div>
-                    
-                    <button type="submit" class="mobile-submit-btn">Сохранить видео</button>
-                </form>
+                        <div class="form-group">
+                            <label>Название</label>
+                            <input type="text" id="videoTitle" required placeholder="Введите название">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Категория</label>
+                            <select id="videoCategory" required>
+                                <option value="tiktok">TikTok</option>
+                                <option value="youtube">YouTube Shorts</option>
+                                <option value="vk">VK Видео</option>
+                                <option value="edits">Edit'ы</option>
+                                <option value="local">Мои видео</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Миниатюра (URL)</label>
+                            <input type="url" id="videoThumbnail" placeholder="https://... (необязательно)">
+                        </div>
+                        
+                        <button type="submit" class="submit-btn" id="saveVideoBtn">Сохранить</button>
+                        <button type="button" class="cancel-btn" id="cancelModalBtn">Отмена</button>
+                    </form>
+                </div>
             </div>
         </div>
 
         <!-- Модальное окно просмотра видео -->
-        <div id="mobilePlayerModal" class="mobile-modal player-modal">
-            <div class="mobile-modal-content player-content">
-                <div class="mobile-player-header">
-                    <button class="mobile-player-close">&times;</button>
-                    <h3 id="mobilePlayerTitle"></h3>
+        <div class="mobile-modal" id="playerModal">
+            <div class="modal-content player-content">
+                <div class="modal-header player-header">
+                    <h3 id="playerVideoTitle">Видео</h3>
+                    <button class="modal-close" id="closePlayerBtn">&times;</button>
                 </div>
-                <div class="mobile-video-player-container" id="mobileVideoPlayer">
+                <div class="video-player-container" id="videoPlayerContainer">
                     <!-- Сюда будет вставляться плеер -->
                 </div>
-                <div class="mobile-video-stats">
-                    <span><i class="fas fa-eye"></i> <span id="mobileViewCount">0</span></span>
-                    <span><i class="fas fa-calendar"></i> <span id="mobileVideoDate"></span></span>
-                    <span id="mobileVideoFileInfo"></span>
+                <div class="video-stats" id="videoStats">
+                    <span><i class="fas fa-eye"></i> <span id="viewCount">0</span></span>
+                    <span><i class="fas fa-calendar"></i> <span id="videoDate"></span></span>
                 </div>
             </div>
         </div>
@@ -154,27 +164,28 @@
         <div class="categories-menu" id="categoriesMenu">
             <div class="categories-menu-header">
                 <h3>Все категории</h3>
-                <button class="close-menu">&times;</button>
+                <button class="close-menu" id="closeMenuBtn">&times;</button>
             </div>
-            <div class="categories-menu-content" id="customCategoriesMenu">
-                <!-- Пользовательские категории -->
+            <div class="categories-menu-content" id="customCategoriesList">
+                <!-- Сюда будут добавляться пользовательские категории -->
             </div>
-            <button class="add-category-menu-btn" id="mobileAddCategoryBtn">
+            <button class="add-category-btn" id="addCategoryBtn">
                 <i class="fas fa-plus"></i> Новая категория
             </button>
         </div>
 
-        <!-- Контекстное меню для карточки видео -->
-        <div class="video-context-menu" id="videoContextMenu">
+        <!-- Контекстное меню (длинное нажатие) -->
+        <div class="context-menu" id="contextMenu">
             <div class="context-menu-item" id="contextEdit">
                 <i class="fas fa-edit"></i> Редактировать
             </div>
-            <div class="context-menu-item" id="contextDelete">
+            <div class="context-menu-item delete" id="contextDelete">
                 <i class="fas fa-trash"></i> Удалить
             </div>
         </div>
     </div>
 
+    <!-- Подключаем скрипт -->
     <script src="m.script.js"></script>
 </body>
 </html>

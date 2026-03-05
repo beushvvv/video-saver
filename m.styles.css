@@ -1,86 +1,36 @@
-/* ===== МОБИЛЬНЫЕ СТИЛИ (ТОЛЬКО ДЛЯ ТЕЛЕФОНОВ) ===== */
+/* ===== МОБИЛЬНЫЕ СТИЛИ ===== */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
 }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background-color: #f5f5f5;
+    background: #f5f5f5;
     color: #333;
     line-height: 1.4;
-    overflow-x: hidden;
-    width: 100%;
     min-height: 100vh;
-    position: fixed;
-    overscroll-behavior: none;
 }
 
 .mobile-container {
     max-width: 100%;
+    padding-bottom: 70px;
     min-height: 100vh;
-    padding-bottom: 70px; /* Отступ для нижней навигации */
-    position: relative;
 }
 
-/* ===== НИЖНЯЯ НАВИГАЦИЯ ===== */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 65px;
-    background-color: white;
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-    z-index: 100;
-    padding-bottom: env(safe-area-inset-bottom);
-}
-
-.nav-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-    height: 100%;
-    color: #999;
-    font-size: 12px;
-    gap: 4px;
-    transition: color 0.2s;
-    cursor: pointer;
-}
-
-.nav-item i {
-    font-size: 22px;
-}
-
-.nav-item.active {
-    color: #ff0000;
-}
-
-.nav-item:active {
-    background-color: #f0f0f0;
-}
-
-/* ===== МОБИЛЬНАЯ ШАПКА ===== */
+/* ===== ШАПКА ===== */
 .mobile-header {
-    background-color: white;
+    background: white;
     padding: 12px 16px;
     display: flex;
-    align-items: center;
     justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     position: sticky;
     top: 0;
     z-index: 90;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .header-left {
@@ -89,7 +39,7 @@ body {
     gap: 10px;
 }
 
-.logo-icon {
+.header-left i {
     font-size: 28px;
     color: #ff0000;
 }
@@ -101,46 +51,44 @@ body {
 
 .header-right {
     display: flex;
-    align-items: center;
     gap: 15px;
+    align-items: center;
 }
 
-.desktop-link {
-    color: #666;
-    font-size: 22px;
-    text-decoration: none;
-    padding: 8px;
-}
-
-.mobile-search-btn, .mobile-add-btn {
+.header-right button,
+.header-right a {
     background: none;
     border: none;
     font-size: 22px;
     color: #333;
     padding: 8px;
     cursor: pointer;
+    text-decoration: none;
 }
 
 .mobile-add-btn {
-    background-color: #ff0000;
-    color: white;
+    background: #ff0000 !important;
+    color: white !important;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 20px !important;
     box-shadow: 0 2px 8px rgba(255,0,0,0.3);
 }
 
-/* ===== ПОИСКОВАЯ СТРОКА ===== */
+/* ===== ПОИСК ===== */
 .mobile-search-bar {
     display: none;
-    padding: 10px 16px;
-    background-color: white;
+    padding: 12px 16px;
+    background: white;
     border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 70px;
+    z-index: 89;
     gap: 10px;
-    align-items: center;
 }
 
 .mobile-search-bar.active {
@@ -149,33 +97,71 @@ body {
 
 .mobile-search-bar input {
     flex: 1;
-    padding: 12px;
+    padding: 12px 16px;
     border: 1px solid #ddd;
     border-radius: 25px;
     font-size: 16px;
     outline: none;
 }
 
-.mobile-search-bar button {
-    background: none;
+.close-search {
+    width: 44px;
+    height: 44px;
     border: none;
-    font-size: 20px;
+    background: #f0f0f0;
+    border-radius: 50%;
+    font-size: 18px;
     color: #666;
-    padding: 8px 12px;
     cursor: pointer;
 }
 
-.close-search {
-    color: #999;
+/* ===== НИЖНЯЯ НАВИГАЦИЯ ===== */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    border-top: 1px solid #eee;
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* ===== ГОРИЗОНТАЛЬНЫЙ СКРОЛЛ КАТЕГОРИЙ ===== */
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: #999;
+    font-size: 11px;
+    cursor: pointer;
+    flex: 1;
+    padding: 8px 0;
+}
+
+.nav-item i {
+    font-size: 22px;
+}
+
+.nav-item.active {
+    color: #ff0000;
+}
+
+.nav-item:active {
+    background: #f5f5f5;
+}
+
+/* ===== ГОРИЗОНТАЛЬНЫЙ СКРОЛЛ ===== */
 .categories-scroll {
     display: flex;
     overflow-x: auto;
     padding: 12px 16px;
     gap: 10px;
-    background-color: white;
+    background: white;
     border-bottom: 1px solid #eee;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
@@ -187,21 +173,19 @@ body {
 
 .category-chip {
     padding: 8px 16px;
-    background-color: #f0f0f0;
+    background: #f0f0f0;
     border-radius: 20px;
     font-size: 14px;
     white-space: nowrap;
     cursor: pointer;
-    transition: all 0.2s;
     min-height: 44px;
     display: flex;
     align-items: center;
 }
 
 .category-chip.active {
-    background-color: #ff0000;
+    background: #ff0000;
     color: white;
-    font-weight: 500;
 }
 
 .category-chip:active {
@@ -209,53 +193,51 @@ body {
 }
 
 .more-categories {
-    background-color: #333;
+    background: #333;
     color: white;
 }
 
-/* ===== СЕТКА ВИДЕО (МОБИЛЬНАЯ) ===== */
+/* ===== СЕТКА ВИДЕО ===== */
 .mobile-videos-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 2px;
     padding: 2px;
-    background-color: #eee;
+    background: #eee;
+    min-height: calc(100vh - 200px);
 }
 
-.mobile-video-card {
-    background-color: white;
-    position: relative;
-    cursor: pointer;
-    -webkit-touch-callout: none;
+.video-card {
+    background: white;
     aspect-ratio: 9/16;
-    overflow: hidden;
-}
-
-.mobile-thumbnail {
-    width: 100%;
-    height: 100%;
     position: relative;
+    overflow: hidden;
+    cursor: pointer;
 }
 
-.mobile-thumbnail img {
+.video-card:active {
+    transform: scale(0.98);
+}
+
+.video-card img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
 }
 
-.mobile-video-overlay {
+.video-overlay {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     background: linear-gradient(transparent, rgba(0,0,0,0.8));
-    padding: 10px;
     color: white;
+    padding: 10px;
 }
 
-.mobile-video-title {
-    font-size: 14px;
+.video-title {
+    font-size: 13px;
     font-weight: 500;
     margin-bottom: 4px;
     display: -webkit-box;
@@ -264,77 +246,82 @@ body {
     overflow: hidden;
 }
 
-.mobile-video-meta {
+.video-meta {
     display: flex;
     justify-content: space-between;
-    font-size: 12px;
+    font-size: 11px;
     opacity: 0.9;
 }
 
-.mobile-video-badge {
+.video-badge {
     position: absolute;
     top: 8px;
     right: 8px;
-    background-color: rgba(0,0,0,0.7);
+    background: rgba(0,0,0,0.7);
     color: white;
     padding: 4px 8px;
     border-radius: 4px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: bold;
     backdrop-filter: blur(4px);
 }
 
-.mobile-video-badge.vk { background-color: #4A76A8; }
-.mobile-video-badge.youtube { background-color: #FF0000; }
-.mobile-video-badge.tiktok { background-color: #000; }
-.mobile-video-badge.local { background-color: #4CAF50; }
-
-/* Длинное нажатие для контекстного меню */
-.mobile-video-card.pressed {
-    transform: scale(0.98);
-    opacity: 0.9;
+/* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
+.empty-state {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+    background: white;
 }
 
-/* ===== МОДАЛЬНЫЕ ОКНА (МОБИЛЬНЫЕ) ===== */
+.empty-state i {
+    font-size: 60px;
+    margin-bottom: 20px;
+    color: #ddd;
+}
+
+.empty-state h3 {
+    margin-bottom: 10px;
+    color: #666;
+}
+
+/* ===== МОДАЛЬНЫЕ ОКНА ===== */
 .mobile-modal {
     display: none;
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
     z-index: 1000;
     backdrop-filter: blur(5px);
 }
 
-.mobile-modal-content {
+.modal-content {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    background-color: white;
+    background: white;
     border-radius: 20px 20px 0 0;
     max-height: 90vh;
     overflow-y: auto;
     animation: slideUp 0.3s ease;
 }
 
-.player-modal .mobile-modal-content {
-    background-color: #1a1a1a;
+.player-content {
+    background: #1a1a1a;
     color: white;
 }
 
 @keyframes slideUp {
-    from {
-        transform: translateY(100%);
-    }
-    to {
-        transform: translateY(0);
-    }
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
 }
 
-.mobile-modal-header {
+.modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -342,38 +329,50 @@ body {
     border-bottom: 1px solid #eee;
     position: sticky;
     top: 0;
-    background-color: white;
-    z-index: 10;
+    background: white;
 }
 
-.mobile-modal-header h2 {
+.player-header {
+    background: #1a1a1a;
+    border-bottom: 1px solid #333;
+    color: white;
+}
+
+.modal-header h2 {
     font-size: 18px;
 }
 
-.mobile-modal-close {
+.modal-close {
     background: none;
     border: none;
-    font-size: 24px;
-    cursor: pointer;
-    padding: 8px;
+    font-size: 28px;
     color: #999;
+    cursor: pointer;
+    padding: 0 10px;
+}
+
+.modal-close:active {
+    color: #ff0000;
+}
+
+.modal-body {
+    padding: 20px;
 }
 
 /* ===== ФОРМЫ ===== */
-.mobile-form-group {
-    padding: 16px 20px;
+.form-group {
+    margin-bottom: 20px;
 }
 
-.mobile-form-group label {
+.form-group label {
     display: block;
     margin-bottom: 8px;
     font-weight: 600;
     font-size: 14px;
-    color: #333;
 }
 
-.mobile-form-group input,
-.mobile-form-group select {
+.form-group input,
+.form-group select {
     width: 100%;
     padding: 14px;
     border: 1px solid #ddd;
@@ -382,13 +381,41 @@ body {
     background: #f9f9f9;
 }
 
+.form-group small {
+    display: block;
+    margin-top: 5px;
+    color: #999;
+    font-size: 12px;
+}
+
+.form-divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+    color: #999;
+}
+
+.form-divider::before,
+.form-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: #eee;
+}
+
+.form-divider::before { left: 0; }
+.form-divider::after { right: 0; }
+
 .file-upload-area {
     border: 2px dashed #ddd;
     border-radius: 10px;
     padding: 30px 20px;
     text-align: center;
-    background-color: #f9f9f9;
+    background: #f9f9f9;
     cursor: pointer;
+    position: relative;
 }
 
 .file-upload-area i {
@@ -403,94 +430,59 @@ body {
     margin-bottom: 5px;
 }
 
-.file-upload-area small {
-    color: #999;
-}
-
-.mobile-form-divider {
-    text-align: center;
-    position: relative;
-    margin: 10px 0;
-    color: #999;
-}
-
-.mobile-form-divider::before,
-.mobile-form-divider::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    width: 40%;
-    height: 1px;
-    background-color: #eee;
-}
-
-.mobile-form-divider::before { left: 5%; }
-.mobile-form-divider::after { right: 5%; }
-
-.mobile-submit-btn {
-    width: calc(100% - 40px);
-    margin: 20px;
+.submit-btn,
+.cancel-btn {
+    width: 100%;
     padding: 16px;
-    background-color: #ff0000;
-    color: white;
     border: none;
     border-radius: 10px;
     font-size: 16px;
     font-weight: 600;
+    margin-top: 10px;
     cursor: pointer;
 }
 
-/* ===== МОБИЛЬНЫЙ ПЛЕЕР ===== */
-.mobile-player-header {
+.submit-btn {
+    background: #ff0000;
+    color: white;
+}
+
+.cancel-btn {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.submit-btn:active {
+    transform: scale(0.98);
+}
+
+/* ===== ПЛЕЕР ===== */
+.video-player-container {
+    width: 100%;
+    background: black;
+    min-height: 250px;
     display: flex;
     align-items: center;
-    padding: 16px;
-    background-color: #1a1a1a;
-    border-bottom: 1px solid #333;
+    justify-content: center;
 }
 
-.mobile-player-close {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 28px;
-    cursor: pointer;
-    padding: 0 16px 0 0;
-}
-
-.mobile-player-header h3 {
-    flex: 1;
-    font-size: 16px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.mobile-video-player-container {
+.video-player-container video {
     width: 100%;
-    background-color: black;
-    min-height: 250px;
-}
-
-.mobile-video-player-container video {
-    width: 100%;
-    height: auto;
     max-height: 50vh;
 }
 
-.mobile-video-player-container iframe {
+.video-player-container iframe {
     width: 100%;
     height: 250px;
     border: none;
 }
 
-.mobile-video-stats {
-    padding: 16px;
+.video-stats {
+    padding: 16px 20px;
     display: flex;
     gap: 20px;
     font-size: 14px;
     color: #ccc;
-    flex-wrap: wrap;
 }
 
 /* ===== МЕНЮ КАТЕГОРИЙ ===== */
@@ -501,7 +493,7 @@ body {
     width: 85%;
     max-width: 320px;
     height: 100%;
-    background-color: white;
+    background: white;
     z-index: 200;
     transition: right 0.3s ease;
     box-shadow: -2px 0 10px rgba(0,0,0,0.1);
@@ -524,6 +516,7 @@ body {
     border: none;
     font-size: 24px;
     cursor: pointer;
+    padding: 0 10px;
 }
 
 .categories-menu-content {
@@ -542,7 +535,7 @@ body {
 }
 
 .menu-category-item:active {
-    background-color: #f5f5f5;
+    background: #f5f5f5;
 }
 
 .menu-category-item.active {
@@ -550,11 +543,11 @@ body {
     font-weight: 600;
 }
 
-.add-category-menu-btn {
+.add-category-btn {
     width: calc(100% - 32px);
     margin: 16px;
     padding: 14px;
-    background-color: #ff0000;
+    background: #ff0000;
     color: white;
     border: none;
     border-radius: 10px;
@@ -563,10 +556,10 @@ body {
 }
 
 /* ===== КОНТЕКСТНОЕ МЕНЮ ===== */
-.video-context-menu {
+.context-menu {
     display: none;
     position: fixed;
-    background-color: white;
+    background: white;
     border-radius: 10px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     z-index: 300;
@@ -574,7 +567,7 @@ body {
     overflow: hidden;
 }
 
-.video-context-menu.active {
+.context-menu.active {
     display: block;
 }
 
@@ -592,26 +585,12 @@ body {
 }
 
 .context-menu-item:active {
-    background-color: #f5f5f5;
+    background: #f5f5f5;
 }
 
 .context-menu-item.delete:active {
-    background-color: #ffeeee;
+    background: #ffeeee;
     color: #ff0000;
-}
-
-/* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
-.mobile-empty-state {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 60px 20px;
-    color: #999;
-}
-
-.mobile-empty-state i {
-    font-size: 60px;
-    margin-bottom: 20px;
-    color: #ddd;
 }
 
 /* ===== УВЕДОМЛЕНИЯ ===== */
@@ -620,7 +599,7 @@ body {
     bottom: 80px;
     left: 20px;
     right: 20px;
-    background-color: rgba(0,0,0,0.8);
+    background: rgba(0,0,0,0.8);
     color: white;
     padding: 14px 20px;
     border-radius: 30px;
@@ -638,18 +617,5 @@ body {
     to {
         transform: translateY(0);
         opacity: 1;
-    }
-}
-
-/* ===== АДАПТАЦИЯ ПОД РАЗНЫЕ ЭКРАНЫ ===== */
-@media (min-width: 480px) {
-    .mobile-videos-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-@media (min-width: 768px) {
-    .mobile-container {
-        display: none; /* Скрываем мобильную версию на планшетах */
     }
 }
