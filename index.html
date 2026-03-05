@@ -101,9 +101,13 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="videoFile">Загрузить с телефона:</label>
-                        <input type="file" id="videoFile" accept="video/*" capture>
-                        <small class="hint">Макс. 50 МБ. Поддержка MP4, 3GP, MOV</small>
+                        <label>Загрузить с компьютера:</label>
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Нажмите для выбора файла</p>
+                            <small>MP4, AVI, MOV до 50 МБ</small>
+                        </div>
+                        <input type="file" id="videoFile" accept="video/*" style="display: none;">
                     </div>
 
                     <div class="form-group">
@@ -153,7 +157,8 @@
 
     <!-- Оверлей для мобильного меню -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
+    <!-- Скрипт для TikTok embed -->
+    <script async src="https://www.tiktok.com/embed.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

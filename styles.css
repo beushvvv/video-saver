@@ -834,6 +834,82 @@ header {
     font-size: 16px;
 }
 
+/* Стили для TikTok embed */
+.tiktok-embed-container {
+    width: 100%;
+    min-height: 600px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000;
+}
+
+.tiktok-embed-container iframe {
+    max-width: 100%;
+    max-height: 70vh;
+}
+
+/* Стиль для бейджа TikTok */
+.video-type-badge.tiktok {
+    background: linear-gradient(135deg, #25F4EE, #FE2C55);
+    color: white;
+}
+
+/* Область загрузки файла */
+.file-upload-area {
+    border: 2px dashed #ddd;
+    border-radius: 10px;
+    padding: 30px 20px;
+    text-align: center;
+    background: #f9f9f9;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 20px;
+}
+
+.file-upload-area:hover {
+    background: #f0f0f0;
+    border-color: #999;
+}
+
+.file-upload-area i {
+    font-size: 40px;
+    color: #999;
+    margin-bottom: 10px;
+}
+
+.file-upload-area p {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.file-upload-area small {
+    color: #999;
+    font-size: 12px;
+}
+
+/* Разделитель в форме */
+.form-divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+    color: #999;
+}
+
+.form-divider::before,
+.form-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: #eee;
+}
+
+.form-divider::before { left: 0; }
+.form-divider::after { right: 0; }
+
 @media (min-width: 769px) {
     .mobile-link {
         display: flex;

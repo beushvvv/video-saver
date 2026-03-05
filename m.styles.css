@@ -593,6 +593,50 @@ body {
     color: #ff0000;
 }
 
+/* Стили для TikTok embed */
+.tiktok-embed-container {
+    width: 100%;
+    min-height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000;
+}
+
+.tiktok-embed-container iframe {
+    max-width: 100%;
+    max-height: 70vh;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 768px) {
+    .tiktok-embed-container {
+        min-height: 400px;
+    }
+    
+    .tiktok-embed-container iframe {
+        width: 100%;
+        height: auto;
+        min-height: 500px;
+    }
+}
+
+/* Стиль для бейджа TikTok */
+.video-badge.tiktok {
+    background: linear-gradient(135deg, #25F4EE, #FE2C55);
+    color: white;
+}
+
+/* Информация об авторе */
+.video-author {
+    font-size: 10px;
+    opacity: 0.8;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* ===== УВЕДОМЛЕНИЯ ===== */
 .mobile-toast {
     position: fixed;

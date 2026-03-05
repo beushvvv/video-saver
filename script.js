@@ -14,6 +14,9 @@ class VideoSaver {
         this.dbVersion = 1;
         this.db = null;
         
+        // Флаг для отслеживания выбранного файла
+        this.selectedFile = null;
+        
         // Заглушки для изображений
         this.defaultThumbnails = {
             youtube: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%23FF0000\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3EYoutube%3C/text%3E%3C/svg%3E',
@@ -23,8 +26,10 @@ class VideoSaver {
             other: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%23666666\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23FFFFFF\' font-size=\'24\' font-family=\'Arial\'%3EVideo%3C/text%3E%3C/svg%3E'
         };
         
-        // Флаг для мобильного меню
-        this.isMobileMenuOpen = false;
+        // Привязываем методы
+        this.addVideo = this.addVideo.bind(this);
+        this.addTikTokVideo = this.addTikTokVideo.bind(this);
+        this.uploadVideoFile = this.uploadVideoFile.bind(this);
         
         this.init();
     }
@@ -43,133 +48,15 @@ class VideoSaver {
         this.bindEvents();
         this.render();
         this.setupCategorySelect();
-        this.setupMobileMenu();
-        this.handleOrientationChange();
-        this.setupPullToRefresh();
-    }
-    
-    setupPullToRefresh() {
-        let touchStartY = 0;
-        const container = document.querySelector('.videos-grid');
-        
-        if (container) {
-            container.addEventListener('touchstart', (e) => {
-                touchStartY = e.touches[0].clientY;
-            }, { passive: true });
-            
-            container.addEventListener('touchend', (e) => {
-                const touchEndY = e.changedTouches[0].clientY;
-                const scrollTop = container.scrollTop;
-                
-                // Pull-to-refresh если вверху страницы
-                if (scrollTop === 0 && touchEndY > touchStartY + 50) {
-                    this.refreshData();
-                }
-            }, { passive: true });
-        }
-    }
-    
-    refreshData() {
-        // Визуальная индикация обновления
-        const grid = document.getElementById('videosGrid');
-        grid.style.opacity = '0.5';
-        grid.style.transition = 'opacity 0.3s';
-        
-        this.loadData();
-        this.render();
-        
-        setTimeout(() => {
-            grid.style.opacity = '1';
-        }, 300);
-    }
-    
-    setupMobileMenu() {
-        const toggleBtn = document.getElementById('mobileMenuToggle');
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        const closeBtn = document.getElementById('closeSidebar');
-        
-        if (toggleBtn && sidebar && overlay) {
-            toggleBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.toggleMobileMenu();
-            });
-            
-            overlay.addEventListener('click', () => {
-                this.closeMobileMenu();
-            });
-            
-            if (closeBtn) {
-                closeBtn.addEventListener('click', () => {
-                    this.closeMobileMenu();
-                });
-            }
-            
-            // Закрытие свайпом влево
-            let touchStartX = 0;
-            sidebar.addEventListener('touchstart', (e) => {
-                touchStartX = e.touches[0].clientX;
-            }, { passive: true });
-            
-            sidebar.addEventListener('touchend', (e) => {
-                const touchEndX = e.changedTouches[0].clientX;
-                if (touchEndX < touchStartX - 50) {
-                    this.closeMobileMenu();
-                }
-            }, { passive: true });
-        }
-    }
-    
-    toggleMobileMenu() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        
-        if (window.innerWidth <= 768) {
-            this.isMobileMenuOpen = !this.isMobileMenuOpen;
-            
-            if (this.isMobileMenuOpen) {
-                sidebar.classList.add('active');
-                overlay.classList.add('active');
-                document.body.style.overflow = 'hidden';
-            } else {
-                sidebar.classList.remove('active');
-                overlay.classList.remove('active');
-                document.body.style.overflow = '';
-            }
-        }
-    }
-    
-    closeMobileMenu() {
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('sidebarOverlay');
-        
-        if (window.innerWidth <= 768) {
-            this.isMobileMenuOpen = false;
-            sidebar.classList.remove('active');
-            overlay.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-    }
-    
-    handleOrientationChange() {
-        window.addEventListener('resize', () => {
-            // Закрываем мобильное меню при повороте
-            if (window.innerWidth > 768 && this.isMobileMenuOpen) {
-                this.closeMobileMenu();
-            }
-            
-            // Перерисовываем для адаптации сетки
-            this.render();
-        });
     }
     
     initDB() {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             const request = indexedDB.open(this.dbName, this.dbVersion);
             
-            request.onerror = (event) => {
-                console.error('Ошибка открытия БД:', event);
-                reject(event);
+            request.onerror = () => {
+                console.warn('⚠️ IndexedDB не работает');
+                resolve();
             };
             
             request.onsuccess = (event) => {
@@ -248,12 +135,7 @@ class VideoSaver {
     
     bindEvents() {
         const addBtn = document.getElementById('addVideoBtn');
-        if (addBtn) {
-            addBtn.addEventListener('click', () => this.openModal('videoModal'));
-            addBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault(); // Предотвращаем двойной срабатывание на мобильных
-            });
-        }
+        if (addBtn) addBtn.addEventListener('click', () => this.openModal('videoModal'));
         
         const closeBtn = document.querySelector('.close');
         if (closeBtn) closeBtn.addEventListener('click', () => {
@@ -280,31 +162,53 @@ class VideoSaver {
         }
         
         const searchBtn = document.getElementById('searchBtn');
-        if (searchBtn) {
-            searchBtn.addEventListener('click', () => this.searchVideos());
-            searchBtn.addEventListener('touchstart', (e) => e.preventDefault());
-        }
+        if (searchBtn) searchBtn.addEventListener('click', () => this.searchVideos());
         
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
             searchInput.addEventListener('keyup', (e) => {
                 if (e.key === 'Enter') this.searchVideos();
             });
-            searchInput.addEventListener('search', () => this.searchVideos()); // Для мобильной клавиатуры
         }
         
         document.querySelectorAll('.sidebar nav ul li').forEach(item => {
             item.addEventListener('click', () => {
                 this.setCategory(item.dataset.category);
-                if (window.innerWidth <= 768) {
-                    this.closeMobileMenu();
-                }
             });
-            item.addEventListener('touchstart', (e) => e.preventDefault());
         });
         
         const addCategoryBtn = document.getElementById('addCategoryBtn');
         if (addCategoryBtn) addCategoryBtn.addEventListener('click', () => this.addCategory());
+        
+        // Загрузка файла
+        const fileInput = document.getElementById('videoFile');
+        const uploadArea = document.getElementById('fileUploadArea');
+        
+        if (fileInput && uploadArea) {
+            uploadArea.addEventListener('click', (e) => {
+                e.preventDefault();
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                    this.selectedFile = files[0];
+                    
+                    uploadArea.innerHTML = `
+                        <i class="fas fa-check-circle" style="color: #4CAF50; font-size: 40px;"></i>
+                        <p style="font-weight: bold; margin: 5px 0;">${this.selectedFile.name}</p>
+                        <small>${(this.selectedFile.size / 1024 / 1024).toFixed(2)} МБ</small>
+                    `;
+                    
+                    const titleInput = document.getElementById('videoTitle');
+                    if (titleInput && !titleInput.value) {
+                        const fileName = this.selectedFile.name.replace(/\.[^/.]+$/, "");
+                        titleInput.value = fileName;
+                    }
+                }
+            });
+        }
         
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
@@ -312,12 +216,6 @@ class VideoSaver {
                 this.pauseVideo();
                 this.resetForm();
             }
-        });
-        
-        // Обработка back button на Android
-        window.addEventListener('popstate', () => {
-            this.closeAllModals();
-            this.closeMobileMenu();
         });
     }
     
@@ -359,6 +257,37 @@ class VideoSaver {
         return null;
     }
     
+    /**
+     * Получение данных TikTok через oEmbed API
+     */
+    async getTikTokData(url) {
+        try {
+            console.log('🎬 Получение данных TikTok для:', url);
+            
+            const response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
+            
+            if (!response.ok) {
+                throw new Error('TikTok API вернул ошибку');
+            }
+            
+            const data = await response.json();
+            
+            return {
+                success: true,
+                embedCode: data.html,
+                thumbnail: data.thumbnail_url,
+                title: data.title,
+                author: data.author_name
+            };
+        } catch (error) {
+            console.error('❌ Ошибка получения данных TikTok:', error);
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
+    
     generateThumbnail(url, title = '') {
         const type = this.getVideoType(url);
         
@@ -383,80 +312,89 @@ class VideoSaver {
     async uploadVideoFile(file, videoData) {
         return new Promise((resolve, reject) => {
             if (file.size > 50 * 1024 * 1024) {
-                reject(new Error('Файл слишком большой. Максимальный размер: 50 МБ'));
+                alert('❌ Файл больше 50 МБ');
+                reject('Файл слишком большой');
                 return;
             }
             
             const reader = new FileReader();
             
-            reader.onload = async (e) => {
-                const videoBlob = e.target.result;
+            reader.onload = (e) => {
                 const videoId = Date.now();
                 
-                const transaction = this.db.transaction(['videos'], 'readwrite');
-                const store = transaction.objectStore('videos');
+                if (this.db) {
+                    try {
+                        const transaction = this.db.transaction(['videos'], 'readwrite');
+                        const store = transaction.objectStore('videos');
+                        store.add({
+                            id: videoId,
+                            filename: file.name,
+                            data: e.target.result,
+                            type: file.type,
+                            size: file.size
+                        });
+                    } catch (err) {
+                        console.warn('Ошибка IndexedDB:', err);
+                    }
+                }
                 
-                const videoEntry = {
+                const newVideo = {
                     id: videoId,
+                    url: `video_${videoId}`,
+                    title: videoData.title || file.name.replace(/\.[^/.]+$/, ""),
+                    category: videoData.category || 'local',
+                    thumbnail: videoData.thumbnail || this.defaultThumbnails.local,
+                    views: 0,
+                    date: new Date().toLocaleDateString('ru-RU'),
+                    type: 'local',
                     filename: file.name,
-                    data: videoBlob,
-                    type: file.type || 'video/mp4',
-                    size: file.size,
-                    uploaded: new Date().toISOString()
+                    size: this.formatFileSize(file.size),
+                    embedCode: null
                 };
                 
-                const request = store.add(videoEntry);
-                
-                request.onsuccess = () => {
-                    const newVideo = {
-                        id: videoId,
-                        url: `video_${videoId}`,
-                        title: videoData.title || file.name,
-                        category: videoData.category || 'local',
-                        thumbnail: videoData.thumbnail || this.defaultThumbnails.local,
-                        views: 0,
-                        date: new Date().toLocaleDateString('ru-RU'),
-                        type: 'local',
-                        filename: file.name,
-                        size: this.formatFileSize(file.size)
-                    };
-                    
-                    this.videos.unshift(newVideo);
-                    this.saveData();
-                    this.render();
-                    
-                    resolve(newVideo);
-                };
-                
-                request.onerror = (err) => reject(err);
+                this.videos.unshift(newVideo);
+                this.saveData();
+                this.render();
+                alert('✅ Видео загружено');
+                resolve();
             };
             
-            reader.onerror = (err) => reject(err);
+            reader.onerror = () => {
+                alert('❌ Ошибка чтения файла');
+                reject();
+            };
+            
             reader.readAsDataURL(file);
         });
     }
     
-    getLocalVideo(videoId) {
-        return new Promise((resolve, reject) => {
-            if (!this.db) {
-                reject('База данных не инициализирована');
-                return;
-            }
-            
-            const transaction = this.db.transaction(['videos'], 'readonly');
-            const store = transaction.objectStore('videos');
-            const request = store.get(videoId);
-            
-            request.onsuccess = () => {
-                if (request.result) {
-                    resolve(request.result);
-                } else {
-                    reject('Видео не найдено');
-                }
-            };
-            
-            request.onerror = (err) => reject(err);
-        });
+    /**
+     * Добавление TikTok видео с использованием oEmbed
+     */
+    async addTikTokVideo(url, formData) {
+        alert('⏳ Загрузка данных TikTok...');
+        
+        const tiktokData = await this.getTikTokData(url);
+        
+        if (!tiktokData.success) {
+            alert('❌ Не удалось загрузить видео TikTok');
+            return null;
+        }
+        
+        const newVideo = {
+            id: Date.now(),
+            url: url,
+            title: formData.title || tiktokData.title || 'TikTok Video',
+            category: formData.category || 'tiktok',
+            thumbnail: formData.thumbnail || tiktokData.thumbnail || this.defaultThumbnails.tiktok,
+            views: 0,
+            date: new Date().toLocaleDateString('ru-RU'),
+            type: 'tiktok',
+            embedCode: tiktokData.embedCode,
+            author: tiktokData.author
+        };
+        
+        return newVideo;
     }
     
     async addVideo() {
@@ -466,85 +404,72 @@ class VideoSaver {
         const categorySelect = document.getElementById('videoCategory');
         const thumbnailInput = document.getElementById('videoThumbnail');
         
-        if ((!urlInput || !urlInput.value) && (!fileInput || !fileInput.files.length)) {
-            alert('Введите ссылку на видео или выберите файл');
+        const url = urlInput ? urlInput.value.trim() : '';
+        const title = titleInput ? titleInput.value.trim() : '';
+        const category = categorySelect ? categorySelect.value : 'other';
+        const thumbnail = thumbnailInput ? thumbnailInput.value.trim() : '';
+        
+        const hasFile = this.selectedFile !== null;
+        
+        if (!url && !hasFile) {
+            alert('❌ Введите ссылку или выберите файл');
             return;
         }
         
-        if (fileInput && fileInput.files.length > 0) {
-            const file = fileInput.files[0];
-            
+        // Если есть файл - загружаем его
+        if (hasFile) {
             try {
                 const videoData = {
-                    title: titleInput?.value || file.name,
-                    category: categorySelect?.value || 'local',
-                    thumbnail: thumbnailInput?.value
+                    title: title || this.selectedFile.name.replace(/\.[^/.]+$/, ""),
+                    category: category,
+                    thumbnail: thumbnail
                 };
                 
-                await this.uploadVideoFile(file, videoData);
+                await this.uploadVideoFile(this.selectedFile, videoData);
+                
+                this.selectedFile = null;
                 this.closeModal('videoModal');
                 this.resetForm();
-                
-                // Показываем сообщение об успехе
-                this.showToast('Видео успешно загружено!');
             } catch (error) {
-                alert('Ошибка при загрузке: ' + error.message);
+                console.error('Ошибка загрузки:', error);
             }
             return;
         }
         
-        const url = urlInput.value;
-        const title = titleInput?.value || 'Без названия';
-        const category = categorySelect?.value || 'other';
-        let thumbnail = thumbnailInput?.value;
-        
-        if (!thumbnail) {
-            thumbnail = this.generateThumbnail(url, title);
+        // Если есть ссылка
+        if (url) {
+            const videoType = this.getVideoType(url);
+            
+            let newVideo = null;
+            
+            // Для TikTok используем специальную обработку
+            if (videoType === 'tiktok') {
+                const formData = { title, category, thumbnail };
+                newVideo = await this.addTikTokVideo(url, formData);
+            } else {
+                // Для остальных видео - стандартная обработка
+                newVideo = {
+                    id: Date.now(),
+                    url: url,
+                    title: title || 'Без названия',
+                    category: category,
+                    thumbnail: thumbnail || this.generateThumbnail(url, title) || this.defaultThumbnails[videoType] || this.defaultThumbnails.other,
+                    views: 0,
+                    date: new Date().toLocaleDateString('ru-RU'),
+                    type: videoType,
+                    embedCode: null
+                };
+            }
+            
+            if (newVideo) {
+                this.videos.unshift(newVideo);
+                this.saveData();
+                this.render();
+                this.closeModal('videoModal');
+                this.resetForm();
+                alert('✅ Видео сохранено');
+            }
         }
-        
-        const newVideo = {
-            id: Date.now(),
-            url: url,
-            title: title,
-            category: category,
-            thumbnail: thumbnail,
-            views: 0,
-            date: new Date().toLocaleDateString('ru-RU'),
-            type: this.getVideoType(url)
-        };
-        
-        this.videos.unshift(newVideo);
-        this.saveData();
-        this.render();
-        this.closeModal('videoModal');
-        this.resetForm();
-        
-        this.showToast('Ссылка сохранена!');
-    }
-    
-    showToast(message) {
-        const toast = document.createElement('div');
-        toast.textContent = message;
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0,0,0,0.8);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-size: 14px;
-            z-index: 2000;
-            animation: fadeInOut 2s ease;
-            pointer-events: none;
-        `;
-        
-        document.body.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.remove();
-        }, 2000);
     }
     
     editVideo(videoId) {
@@ -560,7 +485,7 @@ class VideoSaver {
         const thumbnailInput = document.getElementById('videoThumbnail');
         
         if (urlInput) {
-            urlInput.value = video.type === 'local' ? '' : (video.url || '');
+            urlInput.value = video.type === 'local' ? '' : video.url;
             urlInput.disabled = video.type === 'local';
         }
         
@@ -602,11 +527,10 @@ class VideoSaver {
         this.render();
         this.closeModal('videoModal');
         this.resetForm();
-        
-        this.showToast('Видео обновлено!');
+        alert('✅ Обновлено');
     }
     
-    async deleteVideo(videoId) {
+    deleteVideo(videoId) {
         if (confirm('Удалить видео?')) {
             const video = this.videos.find(v => v.id === videoId);
             
@@ -623,14 +547,15 @@ class VideoSaver {
             this.videos = this.videos.filter(v => v.id !== videoId);
             this.saveData();
             this.render();
-            
-            this.showToast('Видео удалено');
+            alert('✅ Видео удалено');
         }
     }
     
     resetForm() {
         const form = document.getElementById('videoForm');
         if (form) form.reset();
+        
+        this.selectedFile = null;
         
         const urlInput = document.getElementById('videoUrl');
         const fileInput = document.getElementById('videoFile');
@@ -645,10 +570,19 @@ class VideoSaver {
         
         const submitBtn = document.querySelector('#videoForm .submit-btn');
         if (submitBtn) submitBtn.textContent = 'Сохранить видео';
+        
+        const uploadArea = document.getElementById('fileUploadArea');
+        if (uploadArea) {
+            uploadArea.innerHTML = `
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Нажмите для выбора файла</p>
+                <small>MP4, AVI, MOV до 50 МБ</small>
+            `;
+        }
     }
     
     addCategory() {
-        const categoryName = prompt('Название категории:');
+        const categoryName = prompt('Введите название категории:');
         if (categoryName && categoryName.trim()) {
             const newCategory = {
                 id: Date.now(),
@@ -658,8 +592,7 @@ class VideoSaver {
             this.saveData();
             this.renderCategories();
             this.setupCategorySelect();
-            
-            this.showToast('Категория создана');
+            alert('✅ Категория создана');
         }
     }
     
@@ -677,8 +610,7 @@ class VideoSaver {
             this.renderCategories();
             this.setupCategorySelect();
             this.render();
-            
-            this.showToast('Категория удалена');
+            alert('✅ Категория удалена');
         }
     }
     
@@ -709,7 +641,7 @@ class VideoSaver {
             this.render(filtered);
             
             if (filtered.length === 0) {
-                this.showToast('Ничего не найдено');
+                alert('😕 Ничего не найдено');
             }
         } else {
             this.render();
@@ -731,43 +663,59 @@ class VideoSaver {
         const playerTitle = document.getElementById('playerVideoTitle');
         const viewCount = document.getElementById('viewCount');
         const videoDate = document.getElementById('videoDate');
-        const videoFileInfo = document.getElementById('videoFileInfo');
         
         if (!playerContainer) return;
         
         playerContainer.innerHTML = '';
-        if (videoFileInfo) videoFileInfo.style.display = 'none';
         
-        if (video.type === 'local') {
-            try {
-                const localVideo = await this.getLocalVideo(video.id);
-                
-                const videoElement = document.createElement('video');
-                videoElement.id = 'videoPlayer';
-                videoElement.controls = true;
-                videoElement.autoplay = true;
-                videoElement.style.width = '100%';
-                videoElement.style.maxHeight = '70vh';
-                videoElement.setAttribute('playsinline', ''); // Для iOS
-                videoElement.setAttribute('webkit-playsinline', '');
-                
-                const source = document.createElement('source');
-                source.src = localVideo.data;
-                source.type = localVideo.type || 'video/mp4';
-                
-                videoElement.appendChild(source);
-                videoElement.appendChild(document.createTextNode('Ваш браузер не поддерживает видео.'));
-                
-                playerContainer.appendChild(videoElement);
-                
-                if (videoFileInfo) {
-                    videoFileInfo.style.display = 'inline';
-                    videoFileInfo.innerHTML = `📁 ${video.filename || 'Локальное видео'} (${video.size || 'неизвестно'})`;
+        if (video.type === 'tiktok' && video.embedCode) {
+            console.log('🎬 Используем TikTok embed');
+            
+            const embedContainer = document.createElement('div');
+            embedContainer.className = 'tiktok-embed-container';
+            embedContainer.innerHTML = video.embedCode;
+            
+            if (!document.querySelector('script[src="https://www.tiktok.com/embed.js"]')) {
+                const script = document.createElement('script');
+                script.src = 'https://www.tiktok.com/embed.js';
+                script.async = true;
+                document.body.appendChild(script);
+            }
+            
+            playerContainer.appendChild(embedContainer);
+            
+            if (window.tiktok && window.tiktok.refresh) {
+                window.tiktok.refresh();
+            }
+        } else if (video.type === 'local') {
+            if (this.db) {
+                try {
+                    const transaction = this.db.transaction(['videos'], 'readonly');
+                    const store = transaction.objectStore('videos');
+                    const request = store.get(video.id);
+                    
+                    request.onsuccess = () => {
+                        if (request.result) {
+                            const videoEl = document.createElement('video');
+                            videoEl.id = 'videoPlayer';
+                            videoEl.controls = true;
+                            videoEl.autoplay = true;
+                            videoEl.style.width = '100%';
+                            videoEl.style.maxHeight = '70vh';
+                            
+                            const source = document.createElement('source');
+                            source.src = request.result.data;
+                            source.type = request.result.type || 'video/mp4';
+                            
+                            videoEl.appendChild(source);
+                            playerContainer.appendChild(videoEl);
+                        } else {
+                            playerContainer.innerHTML = '<p style="color:white; padding:20px;">❌ Видео не найдено</p>';
+                        }
+                    };
+                } catch (err) {
+                    playerContainer.innerHTML = '<p style="color:white; padding:20px;">❌ Ошибка загрузки</p>';
                 }
-                
-            } catch (error) {
-                console.error('Ошибка загрузки локального видео:', error);
-                playerContainer.innerHTML = this.createErrorMessage('Ошибка загрузки видео');
             }
         } else if (video.type === 'youtube') {
             const videoId = this.getYouTubeId(video.url);
@@ -775,23 +723,33 @@ class VideoSaver {
                 const iframe = document.createElement('iframe');
                 iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
                 iframe.width = '100%';
-                iframe.height = window.innerWidth <= 768 ? '250' : '500';
+                iframe.height = '500';
                 iframe.frameBorder = '0';
                 iframe.allow = 'autoplay; encrypted-media; fullscreen';
                 iframe.allowFullscreen = true;
                 playerContainer.appendChild(iframe);
-            } else {
-                playerContainer.innerHTML = this.createExternalLink(video, 'YouTube', '#FF0000');
             }
         } else {
             const colors = {
                 vk: { bg: 'linear-gradient(135deg, #4A76A8, #2A4F7C)', name: 'VK' },
-                tiktok: { bg: 'linear-gradient(135deg, #25F4EE, #FE2C55)', name: 'TikTok' },
                 other: { bg: 'linear-gradient(135deg, #666666, #333333)', name: 'ссылку' }
             };
             
             const style = colors[video.type] || colors.other;
-            playerContainer.innerHTML = this.createExternalLink(video, style.name, style.bg);
+            
+            playerContainer.innerHTML = `
+                <div style="text-align: center; padding: 40px; background: ${style.bg}; border-radius: 10px;">
+                    <i class="fas fa-external-link-alt" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
+                    <p style="color: white; font-size: 18px; margin-bottom: 25px;">
+                        Видео откроется в новой вкладке
+                    </p>
+                    <a href="${this.escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer"
+                       style="display: inline-block; padding: 15px 40px; background: white; 
+                              text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;">
+                        <i class="fas fa-external-link-alt"></i> Открыть ${style.name}
+                    </a>
+                </div>
+            `;
         }
         
         if (playerTitle) playerTitle.textContent = video.title || 'Без названия';
@@ -799,33 +757,6 @@ class VideoSaver {
         if (videoDate) videoDate.textContent = video.date || new Date().toLocaleDateString('ru-RU');
         
         this.openModal('playerModal');
-    }
-    
-    createErrorMessage(text) {
-        return `
-            <div style="text-align: center; padding: 40px 20px; background: #ff4444; color: white; border-radius: 10px;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px;"></i>
-                <p style="font-size: 16px;">${text}</p>
-            </div>
-        `;
-    }
-    
-    createExternalLink(video, platform, bgColor) {
-        return `
-            <div style="text-align: center; padding: 30px 15px; background: ${bgColor}; border-radius: 10px;">
-                <i class="fab fa-${platform.toLowerCase() === 'vk' ? 'vk' : platform.toLowerCase() === 'tiktok' ? 'tiktok' : 'youtube'}" 
-                   style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
-                <p style="color: white; font-size: 18px; margin-bottom: 25px;">
-                    Открыть в ${platform}
-                </p>
-                <a href="${this.escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer"
-                   style="display: inline-block; padding: 15px 30px; background: white; 
-                          text-decoration: none; border-radius: 30px; font-weight: bold; font-size: 16px;
-                          box-shadow: 0 4px 15px rgba(0,0,0,0.2); color: #333;">
-                    <i class="fas fa-external-link-alt"></i> Открыть
-                </a>
-            </div>
-        `;
     }
     
     pauseVideo() {
@@ -837,25 +768,18 @@ class VideoSaver {
     
     openModal(modalId) {
         const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.display = 'block';
-            document.body.style.overflow = 'hidden';
-        }
+        if (modal) modal.style.display = 'block';
     }
     
     closeModal(modalId) {
         const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
+        if (modal) modal.style.display = 'none';
     }
     
     closeAllModals() {
         document.querySelectorAll('.modal').forEach(modal => {
             modal.style.display = 'none';
         });
-        document.body.style.overflow = '';
     }
     
     renderCategories() {
@@ -876,9 +800,6 @@ class VideoSaver {
             div.addEventListener('click', (e) => {
                 if (!e.target.closest('.delete-category')) {
                     this.setCategory(`custom_${category.id}`);
-                    if (window.innerWidth <= 768) {
-                        this.closeMobileMenu();
-                    }
                 }
             });
             container.appendChild(div);
@@ -913,7 +834,10 @@ class VideoSaver {
             return;
         }
         
-        grid.innerHTML = videosToRender.map(video => `
+        grid.innerHTML = videosToRender.map(video => {
+            const authorHtml = video.author ? `<span>👤 ${video.author}</span>` : '';
+            
+            return `
             <div class="video-card" data-id="${video.id}">
                 <div class="thumbnail">
                     <img src="${this.escapeHtml(video.thumbnail)}" 
@@ -924,8 +848,8 @@ class VideoSaver {
                     <div class="video-type-badge ${video.type || 'other'}">
                         ${video.type === 'vk' ? 'VK' : 
                           video.type === 'youtube' ? 'YT' : 
-                          video.type === 'tiktok' ? 'TT' : 
-                          video.type === 'local' ? '📱' : ''}
+                          video.type === 'tiktok' ? '🎵' : 
+                          video.type === 'local' ? '💾' : ''}
                     </div>
                     <div class="video-actions">
                         <button class="edit-video-btn" onclick="event.stopPropagation(); videoSaver.editVideo(${video.id})">
@@ -945,9 +869,10 @@ class VideoSaver {
                     ${video.size ? `<div style="font-size: 11px; color: #999; margin-top: 5px;">
                         <i class="fas fa-hdd"></i> ${video.size}
                     </div>` : ''}
+                    ${authorHtml ? `<div style="font-size: 11px; color: #999; margin-top: 2px;">${authorHtml}</div>` : ''}
                 </div>
             </div>
-        `).join('');
+        `}).join('');
         
         grid.querySelectorAll('.video-card').forEach(card => {
             card.addEventListener('click', (e) => {
@@ -959,17 +884,6 @@ class VideoSaver {
                     this.playVideo(video);
                 }
             });
-            
-            // Для мобильных добавляем touch-событие
-            card.addEventListener('touchstart', (e) => {
-                if (!e.target.closest('.edit-video-btn') && !e.target.closest('.delete-video-btn')) {
-                    card.style.transform = 'scale(0.98)';
-                }
-            }, { passive: true });
-            
-            card.addEventListener('touchend', (e) => {
-                card.style.transform = '';
-            }, { passive: true });
         });
     }
     
