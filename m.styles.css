@@ -1,0 +1,655 @@
+/* ===== МОБИЛЬНЫЕ СТИЛИ (ТОЛЬКО ДЛЯ ТЕЛЕФОНОВ) ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.4;
+    overflow-x: hidden;
+    width: 100%;
+    min-height: 100vh;
+    position: fixed;
+    overscroll-behavior: none;
+}
+
+.mobile-container {
+    max-width: 100%;
+    min-height: 100vh;
+    padding-bottom: 70px; /* Отступ для нижней навигации */
+    position: relative;
+}
+
+/* ===== НИЖНЯЯ НАВИГАЦИЯ ===== */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 65px;
+    background-color: white;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+    z-index: 100;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    height: 100%;
+    color: #999;
+    font-size: 12px;
+    gap: 4px;
+    transition: color 0.2s;
+    cursor: pointer;
+}
+
+.nav-item i {
+    font-size: 22px;
+}
+
+.nav-item.active {
+    color: #ff0000;
+}
+
+.nav-item:active {
+    background-color: #f0f0f0;
+}
+
+/* ===== МОБИЛЬНАЯ ШАПКА ===== */
+.mobile-header {
+    background-color: white;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-icon {
+    font-size: 28px;
+    color: #ff0000;
+}
+
+.header-left h1 {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.desktop-link {
+    color: #666;
+    font-size: 22px;
+    text-decoration: none;
+    padding: 8px;
+}
+
+.mobile-search-btn, .mobile-add-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #333;
+    padding: 8px;
+    cursor: pointer;
+}
+
+.mobile-add-btn {
+    background-color: #ff0000;
+    color: white;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(255,0,0,0.3);
+}
+
+/* ===== ПОИСКОВАЯ СТРОКА ===== */
+.mobile-search-bar {
+    display: none;
+    padding: 10px 16px;
+    background-color: white;
+    border-bottom: 1px solid #eee;
+    gap: 10px;
+    align-items: center;
+}
+
+.mobile-search-bar.active {
+    display: flex;
+}
+
+.mobile-search-bar input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 25px;
+    font-size: 16px;
+    outline: none;
+}
+
+.mobile-search-bar button {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #666;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.close-search {
+    color: #999;
+}
+
+/* ===== ГОРИЗОНТАЛЬНЫЙ СКРОЛЛ КАТЕГОРИЙ ===== */
+.categories-scroll {
+    display: flex;
+    overflow-x: auto;
+    padding: 12px 16px;
+    gap: 10px;
+    background-color: white;
+    border-bottom: 1px solid #eee;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.categories-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.category-chip {
+    padding: 8px 16px;
+    background-color: #f0f0f0;
+    border-radius: 20px;
+    font-size: 14px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+
+.category-chip.active {
+    background-color: #ff0000;
+    color: white;
+    font-weight: 500;
+}
+
+.category-chip:active {
+    transform: scale(0.95);
+}
+
+.more-categories {
+    background-color: #333;
+    color: white;
+}
+
+/* ===== СЕТКА ВИДЕО (МОБИЛЬНАЯ) ===== */
+.mobile-videos-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2px;
+    padding: 2px;
+    background-color: #eee;
+}
+
+.mobile-video-card {
+    background-color: white;
+    position: relative;
+    cursor: pointer;
+    -webkit-touch-callout: none;
+    aspect-ratio: 9/16;
+    overflow: hidden;
+}
+
+.mobile-thumbnail {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.mobile-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.mobile-video-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    padding: 10px;
+    color: white;
+}
+
+.mobile-video-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.mobile-video-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    opacity: 0.9;
+}
+
+.mobile-video-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: rgba(0,0,0,0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+    backdrop-filter: blur(4px);
+}
+
+.mobile-video-badge.vk { background-color: #4A76A8; }
+.mobile-video-badge.youtube { background-color: #FF0000; }
+.mobile-video-badge.tiktok { background-color: #000; }
+.mobile-video-badge.local { background-color: #4CAF50; }
+
+/* Длинное нажатие для контекстного меню */
+.mobile-video-card.pressed {
+    transform: scale(0.98);
+    opacity: 0.9;
+}
+
+/* ===== МОДАЛЬНЫЕ ОКНА (МОБИЛЬНЫЕ) ===== */
+.mobile-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.mobile-modal-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border-radius: 20px 20px 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+}
+
+.player-modal .mobile-modal-content {
+    background-color: #1a1a1a;
+    color: white;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+
+.mobile-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 0;
+    background-color: white;
+    z-index: 10;
+}
+
+.mobile-modal-header h2 {
+    font-size: 18px;
+}
+
+.mobile-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 8px;
+    color: #999;
+}
+
+/* ===== ФОРМЫ ===== */
+.mobile-form-group {
+    padding: 16px 20px;
+}
+
+.mobile-form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+}
+
+.mobile-form-group input,
+.mobile-form-group select {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 16px;
+    background: #f9f9f9;
+}
+
+.file-upload-area {
+    border: 2px dashed #ddd;
+    border-radius: 10px;
+    padding: 30px 20px;
+    text-align: center;
+    background-color: #f9f9f9;
+    cursor: pointer;
+}
+
+.file-upload-area i {
+    font-size: 40px;
+    color: #999;
+    margin-bottom: 10px;
+}
+
+.file-upload-area p {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.file-upload-area small {
+    color: #999;
+}
+
+.mobile-form-divider {
+    text-align: center;
+    position: relative;
+    margin: 10px 0;
+    color: #999;
+}
+
+.mobile-form-divider::before,
+.mobile-form-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background-color: #eee;
+}
+
+.mobile-form-divider::before { left: 5%; }
+.mobile-form-divider::after { right: 5%; }
+
+.mobile-submit-btn {
+    width: calc(100% - 40px);
+    margin: 20px;
+    padding: 16px;
+    background-color: #ff0000;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ===== МОБИЛЬНЫЙ ПЛЕЕР ===== */
+.mobile-player-header {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #333;
+}
+
+.mobile-player-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0 16px 0 0;
+}
+
+.mobile-player-header h3 {
+    flex: 1;
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mobile-video-player-container {
+    width: 100%;
+    background-color: black;
+    min-height: 250px;
+}
+
+.mobile-video-player-container video {
+    width: 100%;
+    height: auto;
+    max-height: 50vh;
+}
+
+.mobile-video-player-container iframe {
+    width: 100%;
+    height: 250px;
+    border: none;
+}
+
+.mobile-video-stats {
+    padding: 16px;
+    display: flex;
+    gap: 20px;
+    font-size: 14px;
+    color: #ccc;
+    flex-wrap: wrap;
+}
+
+/* ===== МЕНЮ КАТЕГОРИЙ ===== */
+.categories-menu {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 85%;
+    max-width: 320px;
+    height: 100%;
+    background-color: white;
+    z-index: 200;
+    transition: right 0.3s ease;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+}
+
+.categories-menu.active {
+    right: 0;
+}
+
+.categories-menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.close-menu {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.categories-menu-content {
+    padding: 16px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
+.menu-category-item {
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.menu-category-item:active {
+    background-color: #f5f5f5;
+}
+
+.menu-category-item.active {
+    color: #ff0000;
+    font-weight: 600;
+}
+
+.add-category-menu-btn {
+    width: calc(100% - 32px);
+    margin: 16px;
+    padding: 14px;
+    background-color: #ff0000;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* ===== КОНТЕКСТНОЕ МЕНЮ ===== */
+.video-context-menu {
+    display: none;
+    position: fixed;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    z-index: 300;
+    min-width: 200px;
+    overflow: hidden;
+}
+
+.video-context-menu.active {
+    display: block;
+}
+
+.context-menu-item {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.context-menu-item:last-child {
+    border-bottom: none;
+}
+
+.context-menu-item:active {
+    background-color: #f5f5f5;
+}
+
+.context-menu-item.delete:active {
+    background-color: #ffeeee;
+    color: #ff0000;
+}
+
+/* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
+.mobile-empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.mobile-empty-state i {
+    font-size: 60px;
+    margin-bottom: 20px;
+    color: #ddd;
+}
+
+/* ===== УВЕДОМЛЕНИЯ ===== */
+.mobile-toast {
+    position: fixed;
+    bottom: 80px;
+    left: 20px;
+    right: 20px;
+    background-color: rgba(0,0,0,0.8);
+    color: white;
+    padding: 14px 20px;
+    border-radius: 30px;
+    font-size: 14px;
+    text-align: center;
+    z-index: 1000;
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ===== АДАПТАЦИЯ ПОД РАЗНЫЕ ЭКРАНЫ ===== */
+@media (min-width: 480px) {
+    .mobile-videos-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 768px) {
+    .mobile-container {
+        display: none; /* Скрываем мобильную версию на планшетах */
+    }
+}

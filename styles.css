@@ -812,6 +812,34 @@ header {
     }
 }
 
+.mobile-link {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 15px;
+    background-color: #f0f0f0;
+    color: #333;
+    text-decoration: none;
+    border-radius: 20px;
+    font-size: 14px;
+    transition: background-color 0.3s;
+    margin-left: 10px;
+}
+
+.mobile-link:hover {
+    background-color: #e0e0e0;
+}
+
+.mobile-link i {
+    font-size: 16px;
+}
+
+@media (min-width: 769px) {
+    .mobile-link {
+        display: flex;
+    }
+}
+
 /* Специфичные разрешения */
 @media (width: 2340px) and (height: 1080px) {
     /* Специфичные стили для 2340x1080 */
