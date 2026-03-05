@@ -190,5 +190,16 @@
     <script src="m.script.js"></script>
     <!-- Скрипт для TikTok embed -->
     <script async src="https://www.tiktok.com/embed.js"></script>
+    <!-- Глобальная функция для открытия TikTok -->
+    <script>
+        function openTikTokApp(url) {
+            if (window.mobileVideoSaver) {
+                window.mobileVideoSaver.openTikTokApp(url);
+            } else {
+                // Fallback если объект ещё не создан
+                window.open(url, '_blank', 'noopener,noreferrer');
+            }
+        }
+    </script>
 </body>
 </html>

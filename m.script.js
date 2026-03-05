@@ -27,6 +27,7 @@ class MobileVideoSaver {
         // Привязываем методы
         this.addVideo = this.addVideo.bind(this);
         this.addTikTokVideo = this.addTikTokVideo.bind(this);
+        this.enhanceTikTokVideo = this.enhanceTikTokVideo.bind(this);
         this.uploadVideoFile = this.uploadVideoFile.bind(this);
         
         this.init();
@@ -189,7 +190,11 @@ class MobileVideoSaver {
         if (videoForm) {
             videoForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this.addVideo();
+                if (this.editingVideoId) {
+                    this.updateVideo();
+                } else {
+                    this.addVideo();
+                }
             });
         }
         
@@ -198,7 +203,6 @@ class MobileVideoSaver {
         const uploadArea = document.getElementById('fileUploadArea');
         
         if (fileInput && uploadArea) {
-            // Делаем родительский элемент позиционированным
             const container = uploadArea.closest('.form-group');
             if (container) {
                 container.style.position = 'relative';
@@ -317,36 +321,157 @@ class MobileVideoSaver {
     }
     
     /**
-     * НОВЫЙ МЕТОД: Получение данных TikTok через oEmbed API
+     * Пытается получить данные TikTok (может не сработать)
      */
-    async getTikTokData(url) {
-        try {
-            console.log('🎬 Получение данных TikTok для:', url);
-            
-            // Используем oEmbed API TikTok
-            const response = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
-            
-            if (!response.ok) {
-                throw new Error('TikTok API вернул ошибку');
+    async fetchTikTokData(url) {
+        const apis = [
+            `https://api.tikwm.com/video/info?url=${encodeURIComponent(url)}`,
+            `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`
+        ];
+        
+        for (const apiUrl of apis) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                
+                const response = await fetch(apiUrl, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.data) {
+                        return {
+                            title: data.data.title,
+                            thumbnail: data.data.origin_cover || data.data.cover,
+                            author: data.data.author?.unique_id
+                        };
+                    }
+                    
+                    if (data.title) {
+                        return {
+                            title: data.title,
+                            thumbnail: data.thumbnail_url,
+                            author: data.author_name
+                        };
+                    }
+                }
+            } catch (error) {
+                console.log(`⚠️ API ${apiUrl} не ответил:`, error.message);
+                continue;
             }
-            
-            const data = await response.json();
-            console.log('✅ Данные TikTok получены:', data);
-            
-            return {
-                success: true,
-                embedCode: data.html,          // HTML код для встраивания
-                thumbnail: data.thumbnail_url, // Превью
-                title: data.title,              // Название
-                author: data.author_name        // Автор
-            };
-        } catch (error) {
-            console.error('❌ Ошибка получения данных TikTok:', error);
-            return {
-                success: false,
-                error: error.message
-            };
         }
+        
+        return null;
+    }
+    
+    /**
+     * Добавление TikTok видео (СРАЗУ сохраняет, потом улучшает)
+     */
+    async addTikTokVideo(url, formData) {
+        // 1. СОХРАНЯЕМ СРАЗУ с базовыми данными
+        const videoId = Date.now();
+        const newVideo = {
+            id: videoId,
+            url: url,
+            title: formData.title || 'TikTok Video',
+            category: formData.category || 'tiktok',
+            thumbnail: formData.thumbnail || this.defaultThumbnails.tiktok,
+            views: 0,
+            date: new Date().toLocaleDateString('ru-RU'),
+            type: 'tiktok',
+            author: null,
+            enhanced: false
+        };
+        
+        this.videos.unshift(newVideo);
+        this.saveData();
+        this.render();
+        this.showToast('✅ Видео сохранено');
+        this.closeModal('videoModal');
+        this.resetForm();
+        
+        // 2. В ФОНЕ пытаемся улучшить данные
+        this.enhanceTikTokVideo(videoId, url, formData);
+        
+        return newVideo;
+    }
+    
+    /**
+     * Улучшение данных TikTok (фоновая задача)
+     */
+    async enhanceTikTokVideo(videoId, url, formData) {
+        this.showToast('⏳ Загружаем данные TikTok...', 2000);
+        
+        const tikTokData = await this.fetchTikTokData(url);
+        
+        if (tikTokData) {
+            const index = this.videos.findIndex(v => v.id === videoId);
+            if (index !== -1) {
+                this.videos[index] = {
+                    ...this.videos[index],
+                    title: formData.title || tikTokData.title || this.videos[index].title,
+                    thumbnail: tikTokData.thumbnail || this.videos[index].thumbnail,
+                    author: tikTokData.author,
+                    enhanced: true
+                };
+                this.saveData();
+                this.render();
+                this.showToast('✨ Данные TikTok обновлены');
+            }
+        } else {
+            const index = this.videos.findIndex(v => v.id === videoId);
+            if (index !== -1) {
+                this.videos[index].enhanced = true;
+                this.saveData();
+            }
+            this.showToast('ℹ️ Видео сохранено, данные TikTok недоступны');
+        }
+    }
+    
+    /**
+     * НОВЫЙ МЕТОД: Открытие TikTok ссылки в приложении
+     */
+    openTikTokApp(url) {
+        // Пробуем разные схемы для открытия в приложении
+        const appSchemes = [
+            `tiktok://video/${this.extractTikTokVideoId(url)}`,  // Для прямых ссылок на видео
+            `tiktok://` // Просто открыть приложение
+        ];
+        
+        // Пробуем открыть через схему приложения
+        const appUrl = appSchemes[0];
+        
+        // Создаем скрытую ссылку для открытия приложения
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = appUrl;
+        document.body.appendChild(iframe);
+        
+        // Если приложение не открылось через 500ms, открываем в браузере
+        setTimeout(() => {
+            document.body.removeChild(iframe);
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }, 500);
+    }
+    
+    /**
+     * Вспомогательный метод для извлечения ID видео из TikTok ссылки
+     */
+    extractTikTokVideoId(url) {
+        // Пробуем извлечь ID из разных форматов ссылок
+        const patterns = [
+            /video\/(\d+)/,
+            /\/t\/(\w+)/,
+            /\/@[\w.]+\/video\/(\d+)/
+        ];
+        
+        for (const pattern of patterns) {
+            const match = url.match(pattern);
+            if (match) return match[1];
+        }
+        
+        return null;
     }
     
     formatFileSize(bytes) {
@@ -396,8 +521,7 @@ class MobileVideoSaver {
                     date: new Date().toLocaleDateString('ru-RU'),
                     type: 'local',
                     filename: file.name,
-                    size: this.formatFileSize(file.size),
-                    embedCode: null // Для локальных видео нет embed
+                    size: this.formatFileSize(file.size)
                 };
                 
                 this.videos.unshift(newVideo);
@@ -416,38 +540,7 @@ class MobileVideoSaver {
         });
     }
     
-    /**
-     * НОВЫЙ МЕТОД: Добавление TikTok видео с использованием oEmbed
-     */
-    async addTikTokVideo(url, formData) {
-        this.showToast('⏳ Загрузка данных TikTok...');
-        
-        const tiktokData = await this.getTikTokData(url);
-        
-        if (!tiktokData.success) {
-            this.showToast('❌ Не удалось загрузить видео TikTok');
-            return null;
-        }
-        
-        const newVideo = {
-            id: Date.now(),
-            url: url,
-            title: formData.title || tiktokData.title || 'TikTok Video',
-            category: formData.category || 'tiktok',
-            thumbnail: formData.thumbnail || tiktokData.thumbnail || this.defaultThumbnails.tiktok,
-            views: 0,
-            date: new Date().toLocaleDateString('ru-RU'),
-            type: 'tiktok',
-            embedCode: tiktokData.embedCode, // Сохраняем embed код
-            author: tiktokData.author
-        };
-        
-        return newVideo;
-    }
-    
     async addVideo() {
-        console.log('📝 Добавление видео...');
-        
         const urlInput = document.getElementById('videoUrl');
         const titleInput = document.getElementById('videoTitle');
         const categorySelect = document.getElementById('videoCategory');
@@ -465,7 +558,6 @@ class MobileVideoSaver {
             return;
         }
         
-        // Если есть файл - загружаем его
         if (hasFile) {
             try {
                 const videoData = {
@@ -475,49 +567,56 @@ class MobileVideoSaver {
                 };
                 
                 await this.uploadVideoFile(this.selectedFile, videoData);
-                
                 this.selectedFile = null;
-                this.closeModal('videoModal');
-                this.resetForm();
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
             }
             return;
         }
         
-        // Если есть ссылка
         if (url) {
-            // Определяем тип видео
             const videoType = this.getVideoType(url);
             
-            let newVideo = null;
-            
-            // Для TikTok используем специальную обработку
             if (videoType === 'tiktok') {
                 const formData = { title, category, thumbnail };
-                newVideo = await this.addTikTokVideo(url, formData);
-            } else {
-                // Для остальных видео - стандартная обработка
-                newVideo = {
+                await this.addTikTokVideo(url, formData);
+            } else if (videoType === 'youtube') {
+                const videoId = this.getYouTubeId(url);
+                const newVideo = {
                     id: Date.now(),
                     url: url,
-                    title: title || 'Без названия',
+                    title: title || 'YouTube Video',
                     category: category,
-                    thumbnail: thumbnail || this.defaultThumbnails[videoType] || this.defaultThumbnails.other,
+                    thumbnail: thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : this.defaultThumbnails.youtube),
                     views: 0,
                     date: new Date().toLocaleDateString('ru-RU'),
-                    type: videoType,
-                    embedCode: null
+                    type: 'youtube'
                 };
-            }
-            
-            if (newVideo) {
+                
                 this.videos.unshift(newVideo);
                 this.saveData();
                 this.render();
+                this.showToast('✅ YouTube видео сохранено');
                 this.closeModal('videoModal');
                 this.resetForm();
-                this.showToast('✅ Видео сохранено');
+            } else {
+                const newVideo = {
+                    id: Date.now(),
+                    url: url,
+                    title: title || 'Видео',
+                    category: category,
+                    thumbnail: thumbnail || this.defaultThumbnails.other,
+                    views: 0,
+                    date: new Date().toLocaleDateString('ru-RU'),
+                    type: videoType
+                };
+                
+                this.videos.unshift(newVideo);
+                this.saveData();
+                this.render();
+                this.showToast('✅ Ссылка сохранена');
+                this.closeModal('videoModal');
+                this.resetForm();
             }
         }
     }
@@ -603,9 +702,6 @@ class MobileVideoSaver {
         }
     }
     
-    /**
-     * ОБНОВЛЕННЫЙ МЕТОД: Воспроизведение видео с поддержкой TikTok embed
-     */
     async playVideo(video) {
         if (!video) return;
         
@@ -623,31 +719,58 @@ class MobileVideoSaver {
         if (viewsEl) viewsEl.textContent = video.views;
         if (dateEl) dateEl.textContent = video.date;
         
-        // Для TikTok видео используем сохраненный embed код
-        if (video.type === 'tiktok' && video.embedCode) {
-            console.log('🎬 Используем TikTok embed');
-            
-            // Создаем контейнер для embed
-            const embedContainer = document.createElement('div');
-            embedContainer.className = 'tiktok-embed-container';
-            embedContainer.innerHTML = video.embedCode;
-            
-            // Добавляем скрипт TikTok, если его еще нет
-            if (!document.querySelector('script[src="https://www.tiktok.com/embed.js"]')) {
-                const script = document.createElement('script');
-                script.src = 'https://www.tiktok.com/embed.js';
-                script.async = true;
-                document.body.appendChild(script);
+        if (video.type === 'tiktok') {
+            // Для TikTok показываем кнопку открытия в приложении
+            container.innerHTML = `
+                <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, #25F4EE, #FE2C55); border-radius: 10px; margin: 10px;">
+                    <i class="fab fa-tiktok" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
+                    <p style="color: white; font-size: 18px; margin-bottom: 25px;">
+                        Открыть видео в приложении TikTok
+                    </p>
+                    <button onclick="mobileVideoSaver.openTikTokApp('${this.escapeHtml(video.url)}')"
+                            style="display: block; width: 100%; padding: 16px; background: white; 
+                                   border: none; border-radius: 30px; font-weight: bold; font-size: 16px;
+                                   color: #000; margin-bottom: 10px; cursor: pointer;">
+                        <i class="fab fa-tiktok"></i> Открыть в приложении
+                    </button>
+                    <a href="${this.escapeHtml(video.url)}" target="_blank" rel="noopener noreferrer"
+                       style="display: block; width: 100%; padding: 16px; background: rgba(255,255,255,0.2); 
+                              border: 1px solid white; border-radius: 30px; font-weight: bold; font-size: 16px;
+                              color: white; text-decoration: none; text-align: center;">
+                        <i class="fas fa-globe"></i> Открыть в браузере
+                    </a>
+                </div>
+            `;
+        } else if (video.type === 'youtube') {
+            const videoId = this.getYouTubeId(video.url);
+            if (videoId) {
+                const iframe = document.createElement('iframe');
+                iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+                iframe.allow = 'autoplay; encrypted-media; fullscreen';
+                iframe.allowFullscreen = true;
+                iframe.style.width = '100%';
+                iframe.style.height = '250px';
+                container.appendChild(iframe);
             }
-            
-            container.appendChild(embedContainer);
-            
-            // Пытаемся обновить embed (на случай, если скрипт уже загружен)
-            if (window.tiktok && window.tiktok.refresh) {
-                window.tiktok.refresh();
+        } else if (video.type === 'vk') {
+            const vkMatch = video.url.match(/video(-?\d+)_(\d+)/);
+            if (vkMatch) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, #4A76A8, #2A4F7C); border-radius: 10px; margin: 10px;">
+                        <i class="fab fa-vk" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
+                        <p style="color: white; font-size: 18px; margin-bottom: 25px;">
+                            Открыть видео в VK
+                        </p>
+                        <a href="${this.escapeHtml(video.url)}" target="_blank"
+                           style="display: block; width: 100%; padding: 16px; background: white; 
+                                  border: none; border-radius: 30px; font-weight: bold; font-size: 16px;
+                                  color: #4A76A8; text-decoration: none; text-align: center;">
+                            <i class="fab fa-vk"></i> Открыть VK
+                        </a>
+                    </div>
+                `;
             }
-        }
-        else if (video.type === 'local') {
+        } else if (video.type === 'local') {
             if (this.db) {
                 try {
                     const transaction = this.db.transaction(['videos'], 'readonly');
@@ -668,38 +791,33 @@ class MobileVideoSaver {
                             container.innerHTML = '<p style="color:white; padding:20px;">❌ Видео не найдено</p>';
                         }
                     };
-                    
-                    request.onerror = () => {
-                        container.innerHTML = '<p style="color:white; padding:20px;">❌ Ошибка загрузки</p>';
-                    };
                 } catch (err) {
-                    container.innerHTML = '<p style="color:white; padding:20px;">❌ Ошибка плеера</p>';
+                    container.innerHTML = '<p style="color:white; padding:20px;">❌ Ошибка загрузки</p>';
                 }
             }
-        } else if (video.type === 'youtube') {
-            const videoId = this.getYouTubeId(video.url);
-            if (videoId) {
-                const iframe = document.createElement('iframe');
-                iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-                iframe.allow = 'autoplay; encrypted-media; fullscreen';
-                iframe.allowFullscreen = true;
-                iframe.style.width = '100%';
-                iframe.style.height = '250px';
-                container.appendChild(iframe);
-            }
         } else {
-            // Для VK и других - показываем ссылку
             container.innerHTML = `
-                <div style="text-align:center; color:white; padding:40px;">
-                    <p style="margin-bottom:20px;">🎬 Видео из ${video.type.toUpperCase()}</p>
-                    <a href="${video.url}" target="_blank" style="color:#ff0000; font-size:18px; text-decoration:none;">
-                        Открыть в приложении →
+                <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, #666666, #333333); border-radius: 10px; margin: 10px;">
+                    <i class="fas fa-external-link-alt" style="font-size: 60px; color: white; margin-bottom: 20px;"></i>
+                    <p style="color: white; font-size: 18px; margin-bottom: 25px;">
+                        Открыть видео
+                    </p>
+                    <a href="${this.escapeHtml(video.url)}" target="_blank"
+                       style="display: block; width: 100%; padding: 16px; background: white; 
+                              border: none; border-radius: 30px; font-weight: bold; font-size: 16px;
+                              color: #333; text-decoration: none; text-align: center;">
+                        <i class="fas fa-external-link-alt"></i> Открыть ссылку
                     </a>
                 </div>
             `;
         }
         
         this.openModal('playerModal');
+    }
+    
+    pauseVideo() {
+        const container = document.getElementById('videoPlayerContainer');
+        if (container) container.innerHTML = '';
     }
     
     addCategory() {
@@ -711,6 +829,7 @@ class MobileVideoSaver {
             });
             this.saveData();
             this.renderCategories();
+            this.setupCategorySelect();
             this.showToast('✅ Категория создана');
         }
     }
@@ -755,6 +874,35 @@ class MobileVideoSaver {
         });
     }
     
+    setupCategorySelect() {
+        const select = document.getElementById('mobileVideoCategory');
+        if (!select) return;
+        
+        select.innerHTML = '';
+        
+        const standardCategories = [
+            { value: 'tiktok', text: 'TikTok' },
+            { value: 'youtube', text: 'YouTube Shorts' },
+            { value: 'vk', text: 'VK Видео' },
+            { value: 'edits', text: 'Edit\'ы' },
+            { value: 'local', text: 'Мои видео' }
+        ];
+        
+        standardCategories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.value;
+            option.textContent = cat.text;
+            select.appendChild(option);
+        });
+        
+        this.customCategories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = `custom_${cat.id}`;
+            option.textContent = cat.name;
+            select.appendChild(option);
+        });
+    }
+    
     render(filtered = null) {
         const grid = document.getElementById('mobileVideosGrid');
         if (!grid) return;
@@ -777,14 +925,18 @@ class MobileVideoSaver {
         }
         
         grid.innerHTML = videos.map(v => {
-            // Добавляем информацию об авторе для TikTok видео
             const authorHtml = v.author ? `<span>👤 ${v.author}</span>` : '';
+            const enhancedIcon = v.enhanced ? '' : ' ⏳';
             
             return `
             <div class="video-card" data-id="${v.id}">
                 <img src="${v.thumbnail}" loading="lazy" onerror="this.src='${this.defaultThumbnails[v.type] || this.defaultThumbnails.other}'">
                 <div class="video-badge ${v.type}">
-                    ${v.type === 'vk' ? 'VK' : v.type === 'youtube' ? 'YT' : v.type === 'tiktok' ? '🎵' : '📱'}
+                    ${v.type === 'vk' ? 'VK' : 
+                      v.type === 'youtube' ? 'YT' : 
+                      v.type === 'tiktok' ? '🎵' : 
+                      v.type === 'local' ? '💾' : ''}
+                    ${enhancedIcon}
                 </div>
                 <div class="video-overlay">
                     <div class="video-title">${v.title}</div>
@@ -792,7 +944,7 @@ class MobileVideoSaver {
                         <span><i class="fas fa-eye"></i> ${v.views}</span>
                         <span>${v.date}</span>
                     </div>
-                    ${authorHtml ? `<div style="font-size:10px; margin-top:4px;">${authorHtml}</div>` : ''}
+                    ${authorHtml ? `<div style="font-size:10px; opacity:0.8; margin-top:2px;">${authorHtml}</div>` : ''}
                 </div>
             </div>
         `}).join('');
@@ -804,11 +956,6 @@ class MobileVideoSaver {
                 if (video) this.playVideo(video);
             });
         });
-    }
-    
-    pauseVideo() {
-        const container = document.getElementById('videoPlayerContainer');
-        if (container) container.innerHTML = '';
     }
     
     openModal(id) {
@@ -859,15 +1006,24 @@ class MobileVideoSaver {
         }
     }
     
-    showToast(text) {
+    showToast(text, duration = 2000) {
         const toast = document.createElement('div');
         toast.className = 'mobile-toast';
         toast.textContent = text;
         document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 2000);
+        setTimeout(() => toast.remove(), duration);
+        return toast;
+    }
+    
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 
+// Создаем глобальный экземпляр
 let mobileVideoSaver;
 
 if (document.readyState === 'loading') {

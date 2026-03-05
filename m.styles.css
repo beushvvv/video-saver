@@ -593,6 +593,46 @@ body {
     color: #ff0000;
 }
 
+/* Стили для кнопок в плеере */
+.mobile-player-container button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-player-container button:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+}
+
+/* Анимация для уведомлений */
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+    15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(20px); }
+}
+
+.mobile-toast {
+    animation: fadeInOut 2s ease;
+}
+
+/* Бейдж с индикатором загрузки */
+.video-badge.tiktok {
+    background: linear-gradient(135deg, #25F4EE, #FE2C55);
+    color: white;
+}
+
+.video-badge:has(span.enhanced) {
+    position: relative;
+}
+
+/* Адаптация для планшетов */
+@media (min-width: 768px) {
+    .mobile-videos-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
 /* Стили для TikTok embed */
 .tiktok-embed-container {
     width: 100%;
