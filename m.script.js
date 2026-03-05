@@ -21,6 +21,14 @@ class MobileVideoSaver {
             other: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'320\' height=\'180\' viewBox=\'0 0 320 180\'%3E%3Crect width=\'320\' height=\'180\' fill=\'%23666666\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23FFFFFF\' font-size=\'24\' text-anchor=\'middle\' dominant-baseline=\'middle\'%3EVideo%3C/text%3E%3C/svg%3E'
         };
         
+        // Привязываем методы к контексту
+        this.addVideo = this.addVideo.bind(this);
+        this.uploadVideoFile = this.uploadVideoFile.bind(this);
+        this.editVideo = this.editVideo.bind(this);
+        this.updateVideo = this.updateVideo.bind(this);
+        this.deleteVideo = this.deleteVideo.bind(this);
+        this.playVideo = this.playVideo.bind(this);
+        
         this.init();
     }
     
@@ -38,6 +46,7 @@ class MobileVideoSaver {
             
             request.onsuccess = (event) => {
                 this.db = event.target.result;
+                console.log('✅ IndexedDB подключена');
                 resolve();
             };
             
@@ -45,32 +54,51 @@ class MobileVideoSaver {
                 const db = event.target.result;
                 if (!db.objectStoreNames.contains('videos')) {
                     db.createObjectStore('videos', { keyPath: 'id' });
+                    console.log('📁 Создано хранилище видео');
                 }
             };
             
-            request.onerror = () => resolve(); // Продолжаем даже если БД не открылась
+            request.onerror = (err) => {
+                console.warn('⚠️ IndexedDB не работает:', err);
+                resolve(); // Продолжаем даже если БД не открылась
+            };
         });
     }
     
     loadData() {
         try {
-            this.videos = JSON.parse(localStorage.getItem(this.storageKey)) || [];
-            this.customCategories = JSON.parse(localStorage.getItem(this.categoriesKey)) || [];
+            const saved = localStorage.getItem(this.storageKey);
+            this.videos = saved ? JSON.parse(saved) : [];
+            
+            const savedCats = localStorage.getItem(this.categoriesKey);
+            this.customCategories = savedCats ? JSON.parse(savedCats) : [];
+            
+            console.log(`📊 Загружено видео: ${this.videos.length}`);
         } catch (e) {
+            console.error('Ошибка загрузки:', e);
             this.videos = [];
             this.customCategories = [];
         }
     }
     
     saveData() {
-        localStorage.setItem(this.storageKey, JSON.stringify(this.videos));
-        localStorage.setItem(this.categoriesKey, JSON.stringify(this.customCategories));
+        try {
+            localStorage.setItem(this.storageKey, JSON.stringify(this.videos));
+            localStorage.setItem(this.categoriesKey, JSON.stringify(this.customCategories));
+            console.log('💾 Данные сохранены');
+        } catch (e) {
+            console.error('Ошибка сохранения:', e);
+            this.showToast('❌ Ошибка сохранения');
+        }
     }
     
     bindEvents() {
+        console.log('🔌 Привязка событий...');
+        
         // Нижняя навигация
         document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', () => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
                 document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
                 item.classList.add('active');
                 this.currentCategory = item.dataset.category;
@@ -79,27 +107,43 @@ class MobileVideoSaver {
         });
         
         // Кнопки шапки
-        document.getElementById('mobileAddBtn').addEventListener('click', () => {
-            this.openModal('videoModal');
-        });
+        const addBtn = document.getElementById('mobileAddBtn');
+        if (addBtn) {
+            addBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.openModal('videoModal');
+            });
+        }
         
-        document.getElementById('mobileSearchBtn').addEventListener('click', () => {
-            document.getElementById('mobileSearchBar').classList.toggle('active');
-        });
+        const searchBtn = document.getElementById('mobileSearchBtn');
+        if (searchBtn) {
+            searchBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('mobileSearchBar').classList.toggle('active');
+            });
+        }
         
-        document.getElementById('closeSearchBtn').addEventListener('click', () => {
-            document.getElementById('mobileSearchBar').classList.remove('active');
-            document.getElementById('mobileSearchInput').value = '';
-            this.render();
-        });
+        const closeSearch = document.getElementById('closeSearchBtn');
+        if (closeSearch) {
+            closeSearch.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('mobileSearchBar').classList.remove('active');
+                document.getElementById('mobileSearchInput').value = '';
+                this.render();
+            });
+        }
         
-        document.getElementById('mobileSearchInput').addEventListener('keyup', (e) => {
-            if (e.key === 'Enter') this.searchVideos();
-        });
+        const searchInput = document.getElementById('mobileSearchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') this.searchVideos();
+            });
+        }
         
         // Категории
         document.querySelectorAll('.category-chip').forEach(chip => {
-            chip.addEventListener('click', () => {
+            chip.addEventListener('click', (e) => {
+                e.preventDefault();
                 if (chip.classList.contains('more-categories')) {
                     document.getElementById('categoriesMenu').classList.add('active');
                     this.renderCategories();
@@ -113,60 +157,92 @@ class MobileVideoSaver {
         });
         
         // Закрытие модалок
-        document.getElementById('closeModalBtn').addEventListener('click', () => {
-            this.closeModal('videoModal');
-        });
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        if (closeModalBtn) {
+            closeModalBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closeModal('videoModal');
+                this.resetForm();
+            });
+        }
         
-        document.getElementById('cancelModalBtn').addEventListener('click', () => {
-            this.closeModal('videoModal');
-        });
+        const cancelModalBtn = document.getElementById('cancelModalBtn');
+        if (cancelModalBtn) {
+            cancelModalBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closeModal('videoModal');
+                this.resetForm();
+            });
+        }
         
-        document.getElementById('closePlayerBtn').addEventListener('click', () => {
-            this.closeModal('playerModal');
-            this.pauseVideo();
-        });
+        const closePlayerBtn = document.getElementById('closePlayerBtn');
+        if (closePlayerBtn) {
+            closePlayerBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.closeModal('playerModal');
+                this.pauseVideo();
+            });
+        }
         
-        document.getElementById('closeMenuBtn').addEventListener('click', () => {
-            document.getElementById('categoriesMenu').classList.remove('active');
-        });
+        const closeMenuBtn = document.getElementById('closeMenuBtn');
+        if (closeMenuBtn) {
+            closeMenuBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('categoriesMenu').classList.remove('active');
+            });
+        }
         
-        // Форма
-        document.getElementById('videoForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (this.editingVideoId) {
-                this.updateVideo();
-            } else {
-                this.addVideo();
-            }
-        });
+        // Форма добавления видео
+        const videoForm = document.getElementById('videoForm');
+        if (videoForm) {
+            videoForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                console.log('📝 Форма отправлена');
+                if (this.editingVideoId) {
+                    this.updateVideo();
+                } else {
+                    this.addVideo();
+                }
+            });
+        }
         
         // Загрузка файла
         const uploadArea = document.getElementById('fileUploadArea');
         const fileInput = document.getElementById('videoFile');
         
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
-        
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length) {
-                uploadArea.innerHTML = `
-                    <i class="fas fa-check-circle" style="color: #4CAF50;"></i>
-                    <p>${e.target.files[0].name}</p>
-                    <small>${(e.target.files[0].size / 1024 / 1024).toFixed(2)} МБ</small>
-                `;
-            }
-        });
+        if (uploadArea && fileInput) {
+            uploadArea.addEventListener('click', (e) => {
+                e.preventDefault();
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    const file = e.target.files[0];
+                    uploadArea.innerHTML = `
+                        <i class="fas fa-check-circle" style="color: #4CAF50;"></i>
+                        <p>${file.name}</p>
+                        <small>${(file.size / 1024 / 1024).toFixed(2)} МБ</small>
+                    `;
+                    console.log('📁 Выбран файл:', file.name);
+                }
+            });
+        }
         
         // Добавление категории
-        document.getElementById('addCategoryBtn').addEventListener('click', () => {
-            this.addCategory();
-        });
+        const addCategoryBtn = document.getElementById('addCategoryBtn');
+        if (addCategoryBtn) {
+            addCategoryBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.addCategory();
+            });
+        }
         
-        // Закрытие по клику вне модалки
+        // Закрытие по клику на оверлей
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('mobile-modal')) {
                 this.closeAllModals();
+                this.resetForm();
             }
         });
     }
@@ -198,22 +274,30 @@ class MobileVideoSaver {
             clearTimeout(this.longPressTimer);
         });
         
-        document.getElementById('contextEdit').addEventListener('click', () => {
-            if (this.selectedVideoId) {
-                this.editVideo(this.selectedVideoId);
-                document.getElementById('contextMenu').classList.remove('active');
-            }
-        });
+        const contextEdit = document.getElementById('contextEdit');
+        if (contextEdit) {
+            contextEdit.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (this.selectedVideoId) {
+                    this.editVideo(this.selectedVideoId);
+                    contextMenu.classList.remove('active');
+                }
+            });
+        }
         
-        document.getElementById('contextDelete').addEventListener('click', () => {
-            if (this.selectedVideoId) {
-                this.deleteVideo(this.selectedVideoId);
-                document.getElementById('contextMenu').classList.remove('active');
-            }
-        });
+        const contextDelete = document.getElementById('contextDelete');
+        if (contextDelete) {
+            contextDelete.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (this.selectedVideoId) {
+                    this.deleteVideo(this.selectedVideoId);
+                    contextMenu.classList.remove('active');
+                }
+            });
+        }
         
         document.addEventListener('click', () => {
-            document.getElementById('contextMenu').classList.remove('active');
+            contextMenu.classList.remove('active');
         });
     }
     
@@ -240,9 +324,12 @@ class MobileVideoSaver {
     }
     
     async uploadVideoFile(file, videoData) {
+        console.log('📤 Загрузка файла:', file.name);
+        
         return new Promise((resolve, reject) => {
             if (file.size > 50 * 1024 * 1024) {
-                reject('Файл слишком большой (макс. 50 МБ)');
+                this.showToast('❌ Файл больше 50 МБ');
+                reject('Файл слишком большой');
                 return;
             }
             
@@ -251,6 +338,7 @@ class MobileVideoSaver {
             reader.onload = (e) => {
                 const videoId = Date.now();
                 
+                // Сохраняем в IndexedDB если доступна
                 if (this.db) {
                     try {
                         const transaction = this.db.transaction(['videos'], 'readwrite');
@@ -262,8 +350,9 @@ class MobileVideoSaver {
                             type: file.type,
                             size: file.size
                         });
+                        console.log('✅ Файл сохранен в IndexedDB');
                     } catch (err) {
-                        console.warn('Ошибка сохранения в IndexedDB:', err);
+                        console.warn('Ошибка IndexedDB:', err);
                     }
                 }
                 
@@ -283,7 +372,14 @@ class MobileVideoSaver {
                 this.videos.unshift(newVideo);
                 this.saveData();
                 this.render();
+                this.showToast('✅ Видео загружено');
                 resolve();
+            };
+            
+            reader.onerror = (err) => {
+                console.error('Ошибка чтения файла:', err);
+                this.showToast('❌ Ошибка чтения файла');
+                reject(err);
             };
             
             reader.readAsDataURL(file);
@@ -291,14 +387,22 @@ class MobileVideoSaver {
     }
     
     async addVideo() {
-        const url = document.getElementById('videoUrl').value;
-        const file = document.getElementById('videoFile').files[0];
-        const title = document.getElementById('videoTitle').value;
-        const category = document.getElementById('videoCategory').value;
-        const thumbnail = document.getElementById('videoThumbnail').value;
+        console.log('📝 Добавление видео...');
+        
+        const urlInput = document.getElementById('videoUrl');
+        const fileInput = document.getElementById('videoFile');
+        const titleInput = document.getElementById('videoTitle');
+        const categorySelect = document.getElementById('videoCategory');
+        const thumbnailInput = document.getElementById('videoThumbnail');
+        
+        const url = urlInput ? urlInput.value : '';
+        const file = fileInput && fileInput.files.length > 0 ? fileInput.files[0] : null;
+        const title = titleInput ? titleInput.value : '';
+        const category = categorySelect ? categorySelect.value : 'other';
+        const thumbnail = thumbnailInput ? thumbnailInput.value : '';
         
         if (!url && !file) {
-            this.showToast('Введите ссылку или выберите файл');
+            this.showToast('❌ Введите ссылку или выберите файл');
             return;
         }
         
@@ -307,13 +411,13 @@ class MobileVideoSaver {
                 await this.uploadVideoFile(file, { title, category, thumbnail });
                 this.closeModal('videoModal');
                 this.resetForm();
-                this.showToast('✅ Видео загружено');
             } catch (error) {
-                this.showToast('❌ Ошибка: ' + error);
+                console.error('Ошибка загрузки:', error);
             }
             return;
         }
         
+        // Добавление по ссылке
         const newVideo = {
             id: Date.now(),
             url: url,
@@ -325,6 +429,8 @@ class MobileVideoSaver {
             type: this.getVideoType(url)
         };
         
+        console.log('✅ Новое видео:', newVideo);
+        
         this.videos.unshift(newVideo);
         this.saveData();
         this.render();
@@ -334,33 +440,49 @@ class MobileVideoSaver {
     }
     
     editVideo(videoId) {
+        console.log('✏️ Редактирование видео:', videoId);
+        
         const video = this.videos.find(v => v.id === videoId);
         if (!video) return;
         
         this.editingVideoId = videoId;
         
-        document.getElementById('videoUrl').value = video.type === 'local' ? '' : video.url;
-        document.getElementById('videoTitle').value = video.title;
-        document.getElementById('videoCategory').value = video.category;
-        document.getElementById('videoThumbnail').value = video.thumbnail || '';
+        const urlInput = document.getElementById('videoUrl');
+        const titleInput = document.getElementById('videoTitle');
+        const categorySelect = document.getElementById('videoCategory');
+        const thumbnailInput = document.getElementById('videoThumbnail');
         
-        document.getElementById('modalTitle').textContent = 'Редактировать';
-        document.getElementById('saveVideoBtn').textContent = 'Обновить';
+        if (urlInput) urlInput.value = video.type === 'local' ? '' : video.url;
+        if (titleInput) titleInput.value = video.title;
+        if (categorySelect) categorySelect.value = video.category;
+        if (thumbnailInput) thumbnailInput.value = video.thumbnail || '';
+        
+        const modalTitle = document.getElementById('modalTitle');
+        if (modalTitle) modalTitle.textContent = 'Редактировать';
+        
+        const saveBtn = document.getElementById('saveVideoBtn');
+        if (saveBtn) saveBtn.textContent = 'Обновить';
         
         this.openModal('videoModal');
     }
     
     updateVideo() {
+        console.log('🔄 Обновление видео:', this.editingVideoId);
+        
         if (!this.editingVideoId) return;
         
         const index = this.videos.findIndex(v => v.id === this.editingVideoId);
         if (index === -1) return;
         
+        const titleInput = document.getElementById('videoTitle');
+        const categorySelect = document.getElementById('videoCategory');
+        const thumbnailInput = document.getElementById('videoThumbnail');
+        
         this.videos[index] = {
             ...this.videos[index],
-            title: document.getElementById('videoTitle').value,
-            category: document.getElementById('videoCategory').value,
-            thumbnail: document.getElementById('videoThumbnail').value || this.videos[index].thumbnail
+            title: titleInput ? titleInput.value : this.videos[index].title,
+            category: categorySelect ? categorySelect.value : this.videos[index].category,
+            thumbnail: thumbnailInput ? thumbnailInput.value || this.videos[index].thumbnail : this.videos[index].thumbnail
         };
         
         this.saveData();
@@ -371,6 +493,8 @@ class MobileVideoSaver {
     }
     
     deleteVideo(videoId) {
+        console.log('🗑️ Удаление видео:', videoId);
+        
         if (confirm('Удалить видео?')) {
             this.videos = this.videos.filter(v => v.id !== videoId);
             this.saveData();
@@ -380,7 +504,10 @@ class MobileVideoSaver {
     }
     
     searchVideos() {
-        const query = document.getElementById('mobileSearchInput').value.toLowerCase();
+        const input = document.getElementById('mobileSearchInput');
+        if (!input) return;
+        
+        const query = input.value.toLowerCase();
         if (!query) {
             this.render();
             return;
@@ -390,9 +517,15 @@ class MobileVideoSaver {
             v.title.toLowerCase().includes(query)
         );
         this.render(filtered);
+        
+        if (filtered.length === 0) {
+            this.showToast('😕 Ничего не найдено');
+        }
     }
     
     async playVideo(video) {
+        console.log('▶️ Воспроизведение:', video.title);
+        
         if (!video) return;
         
         this.currentVideo = video;
@@ -400,11 +533,14 @@ class MobileVideoSaver {
         this.saveData();
         
         const container = document.getElementById('videoPlayerContainer');
-        container.innerHTML = '';
+        const titleEl = document.getElementById('playerVideoTitle');
+        const viewsEl = document.getElementById('viewCount');
+        const dateEl = document.getElementById('videoDate');
         
-        document.getElementById('playerVideoTitle').textContent = video.title;
-        document.getElementById('viewCount').textContent = video.views;
-        document.getElementById('videoDate').textContent = video.date;
+        if (container) container.innerHTML = '';
+        if (titleEl) titleEl.textContent = video.title;
+        if (viewsEl) viewsEl.textContent = video.views;
+        if (dateEl) dateEl.textContent = video.date;
         
         if (video.type === 'local') {
             if (this.db) {
@@ -423,10 +559,17 @@ class MobileVideoSaver {
                             videoEl.style.maxHeight = '50vh';
                             videoEl.src = request.result.data;
                             container.appendChild(videoEl);
+                        } else {
+                            container.innerHTML = '<p style="color:white; padding:20px;">❌ Видео не найдено</p>';
                         }
                     };
+                    
+                    request.onerror = () => {
+                        container.innerHTML = '<p style="color:white; padding:20px;">❌ Ошибка загрузки</p>';
+                    };
                 } catch (err) {
-                    container.innerHTML = '<p style="color:white; padding:20px;">Ошибка загрузки</p>';
+                    console.error('Ошибка плеера:', err);
+                    container.innerHTML = '<p style="color:white; padding:20px;">❌ Ошибка плеера</p>';
                 }
             }
         } else if (video.type === 'youtube') {
@@ -436,13 +579,17 @@ class MobileVideoSaver {
                 iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
                 iframe.allow = 'autoplay; encrypted-media; fullscreen';
                 iframe.allowFullscreen = true;
+                iframe.style.width = '100%';
+                iframe.style.height = '250px';
                 container.appendChild(iframe);
             }
         } else {
             container.innerHTML = `
-                <div style="text-align:center; color:white; padding:20px;">
-                    <p>Открыть видео в приложении:</p>
-                    <a href="${video.url}" target="_blank" style="color:#ff0000; font-size:18px;">${video.url}</a>
+                <div style="text-align:center; color:white; padding:40px;">
+                    <p style="margin-bottom:20px;">🎬 Видео из ${video.type.toUpperCase()}</p>
+                    <a href="${video.url}" target="_blank" style="color:#ff0000; font-size:18px; text-decoration:none;">
+                        Открыть в приложении →
+                    </a>
                 </div>
             `;
         }
@@ -495,9 +642,6 @@ class MobileVideoSaver {
                     this.currentCategory = item.dataset.category;
                     document.getElementById('categoriesMenu').classList.remove('active');
                     this.render();
-                    
-                    // Обновляем активный чип
-                    document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('active'));
                 }
             });
         });
@@ -505,6 +649,8 @@ class MobileVideoSaver {
     
     render(filtered = null) {
         const grid = document.getElementById('mobileVideosGrid');
+        if (!grid) return;
+        
         const videos = filtered || this.videos.filter(v => {
             if (this.currentCategory === 'all') return true;
             if (this.currentCategory === 'local') return v.type === 'local';
@@ -539,7 +685,8 @@ class MobileVideoSaver {
         `).join('');
         
         document.querySelectorAll('.video-card').forEach(card => {
-            card.addEventListener('click', () => {
+            card.addEventListener('click', (e) => {
+                e.preventDefault();
                 const video = this.videos.find(v => v.id === parseInt(card.dataset.id));
                 if (video) this.playVideo(video);
             });
@@ -548,17 +695,23 @@ class MobileVideoSaver {
     
     pauseVideo() {
         const container = document.getElementById('videoPlayerContainer');
-        container.innerHTML = '';
+        if (container) container.innerHTML = '';
     }
     
     openModal(id) {
-        document.getElementById(id).style.display = 'block';
-        document.body.style.overflow = 'hidden';
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
     }
     
     closeModal(id) {
-        document.getElementById(id).style.display = 'none';
-        document.body.style.overflow = '';
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
     }
     
     closeAllModals() {
@@ -567,17 +720,26 @@ class MobileVideoSaver {
     }
     
     resetForm() {
-        document.getElementById('videoForm').reset();
+        const form = document.getElementById('videoForm');
+        if (form) form.reset();
+        
         this.editingVideoId = null;
-        document.getElementById('modalTitle').textContent = 'Добавить видео';
-        document.getElementById('saveVideoBtn').textContent = 'Сохранить';
+        
+        const modalTitle = document.getElementById('modalTitle');
+        if (modalTitle) modalTitle.textContent = 'Добавить видео';
+        
+        const saveBtn = document.getElementById('saveVideoBtn');
+        if (saveBtn) saveBtn.textContent = 'Сохранить';
         
         // Сброс области загрузки
-        document.getElementById('fileUploadArea').innerHTML = `
-            <i class="fas fa-cloud-upload-alt"></i>
-            <p>Нажмите для выбора файла</p>
-            <small>MP4, 3GP, MOV до 50 МБ</small>
-        `;
+        const uploadArea = document.getElementById('fileUploadArea');
+        if (uploadArea) {
+            uploadArea.innerHTML = `
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Нажмите для выбора файла</p>
+                <small>MP4, 3GP, MOV до 50 МБ</small>
+            `;
+        }
     }
     
     showToast(text) {
@@ -589,5 +751,16 @@ class MobileVideoSaver {
     }
 }
 
-// Инициализация
-const mobileVideoSaver = new MobileVideoSaver();
+// Создаем глобальный экземпляр
+let mobileVideoSaver;
+
+// Инициализация после загрузки DOM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('📱 Мобильная версия инициализируется...');
+        mobileVideoSaver = new MobileVideoSaver();
+    });
+} else {
+    console.log('📱 Мобильная версия инициализируется...');
+    mobileVideoSaver = new MobileVideoSaver();
+}
